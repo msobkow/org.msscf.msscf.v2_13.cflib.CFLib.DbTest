@@ -26,7 +26,7 @@ public class SecDbConfig {
     public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(DataSource secDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(secDataSource);
-        em.setPackagesToScan("com.gmail.sobkow.mark.demojpa.secdb");
+        em.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.dbutil", "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         Properties jpaProperties = new Properties();
