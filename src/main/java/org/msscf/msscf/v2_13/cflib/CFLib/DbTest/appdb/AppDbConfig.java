@@ -1,4 +1,4 @@
-package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
+package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
@@ -22,11 +22,11 @@ import java.util.Properties;
 
 @Configuration
 @EnableTransactionManagement
-public class SecDbConfig {
+public class AppDbConfig {
 
     @Bean
-    @ConfigurationProperties(prefix = "secdb.datasource")
-    public DataSource secDataSource() {
+    @ConfigurationProperties(prefix = "appdb.datasource")
+    public DataSource appDataSource() {
         Properties userProperties = new Properties();
         File userFile = new File(System.getProperty("user.home"), ".cfdbtest.properties");
         if (userFile.exists()) {
@@ -36,12 +36,12 @@ public class SecDbConfig {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        String dbDriver = userProperties.getProperty("secdb.datasource.driver-class-name");
-        String dbUrl = userProperties.getProperty("secdb.datasource.url");
-        System.setProperty("secdb.datasource.jdbcUrl", dbUrl);
-        String dbUser = userProperties.getProperty("secdb.datasource.username");
-        String dbPassword = userProperties.getProperty("secdb.datasource.password");
-        String dbSchema = userProperties.getProperty("secdb.datasource.schema");
+        String dbDriver = userProperties.getProperty("appdb.datasource.driver-class-name");
+        String dbUrl = userProperties.getProperty("appdb.datasource.url");
+        System.setProperty("appdb.datasource.jdbcUrl", dbUrl);
+        String dbUser = userProperties.getProperty("appdb.datasource.username");
+        String dbPassword = userProperties.getProperty("appdb.datasource.password");
+        String dbSchema = userProperties.getProperty("appdb.datasource.schema");
 
         HikariConfig config = new HikariConfig();
         config.setDriverClassName(dbDriver);
@@ -51,7 +51,7 @@ public class SecDbConfig {
         config.setPassword(dbPassword);
         config.setSchema(dbSchema);
         config.setAutoCommit(false);
-        config.setPoolName("SecDbPool");
+        config.setPoolName("AppDbPool");
 
         HikariDataSource ds = new HikariDataSource(config);
         return ds;
@@ -59,10 +59,10 @@ public class SecDbConfig {
     }
 
     @Bean
-    public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(DataSource secDataSource) {
+    public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(DataSource appDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(secDataSource);
-        em.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.dbutil", "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb");
+        em.setDataSource(appDataSource);
+        em.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.dbutil", "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         Properties jpaProperties = new Properties();
@@ -75,9 +75,9 @@ public class SecDbConfig {
     }
 
     @Bean
-    public JpaTransactionManager secTransactionManager(LocalContainerEntityManagerFactoryBean secEntityManagerFactory) {
+    public JpaTransactionManager appTransactionManager(LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(secEntityManagerFactory.getObject());
+        transactionManager.setEntityManagerFactory(appEntityManagerFactory.getObject());
         return transactionManager;
     }
 }
