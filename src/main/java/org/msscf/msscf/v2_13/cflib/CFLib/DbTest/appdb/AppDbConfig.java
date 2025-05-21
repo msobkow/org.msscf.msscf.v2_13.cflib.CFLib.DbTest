@@ -1,10 +1,10 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -24,7 +24,8 @@ import java.util.Properties;
 @EnableTransactionManagement
 public class AppDbConfig {
 
-    @Bean
+    @Primary
+    @Bean(name = "appDataSource")
     @ConfigurationProperties(prefix = "appdb.datasource")
     public DataSource appDataSource() {
         Properties userProperties = new Properties();
@@ -58,15 +59,16 @@ public class AppDbConfig {
         // return DataSourceBuilder.create().build();
     }
 
-    @Bean
-    public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(DataSource appDataSource) {
+    @Primary
+    @Bean(name = "appEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(@Qualifier("appDataSource") DataSource appDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(appDataSource);
+        em.setPersistenceUnitName("appPersistenceUnit");
         em.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.dbutil", "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         Properties jpaProperties = new Properties();
-        // Externalize these properties to application.properties or .demojpa.properties
         jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         jpaProperties.put("hibernate.hbm2ddl.auto", "update");
         em.setJpaProperties(jpaProperties);
@@ -74,8 +76,9 @@ public class AppDbConfig {
         return em;
     }
 
-    @Bean
-    public JpaTransactionManager appTransactionManager(LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
+    @Primary
+    @Bean(name = "appTransactionManager")
+    public JpaTransactionManager appTransactionManager(@Qualifier("appEntityManagerFactory") LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
         transactionManager.setEntityManagerFactory(appEntityManagerFactory.getObject());
         return transactionManager;

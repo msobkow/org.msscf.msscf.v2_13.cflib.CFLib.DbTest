@@ -1,10 +1,9 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -24,7 +23,7 @@ import java.util.Properties;
 @EnableTransactionManagement
 public class SecDbConfig {
 
-    @Bean
+    @Bean(name = "secDataSource")
     @ConfigurationProperties(prefix = "secdb.datasource")
     public DataSource secDataSource() {
         Properties userProperties = new Properties();
@@ -58,15 +57,15 @@ public class SecDbConfig {
         // return DataSourceBuilder.create().build();
     }
 
-    @Bean
-    public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(DataSource secDataSource) {
+    @Bean(name = "secEntityManagerFactory")
+    public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(@Qualifier("secDataSource") DataSource secDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(secDataSource);
+        em.setPersistenceUnitName("secPersistenceUnit");
         em.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.dbutil", "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb");
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         Properties jpaProperties = new Properties();
-        // Externalize these properties to application.properties or .demojpa.properties
         jpaProperties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         jpaProperties.put("hibernate.hbm2ddl.auto", "update");
         em.setJpaProperties(jpaProperties);
@@ -74,8 +73,8 @@ public class SecDbConfig {
         return em;
     }
 
-    @Bean
-    public JpaTransactionManager secTransactionManager(LocalContainerEntityManagerFactoryBean secEntityManagerFactory) {
+    @Bean(name = "secTransactionManager")
+    public JpaTransactionManager secTransactionManager(@Qualifier("secEntityManagerFactory") LocalContainerEntityManagerFactoryBean secEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
         transactionManager.setEntityManagerFactory(secEntityManagerFactory.getObject());
         return transactionManager;
