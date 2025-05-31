@@ -27,62 +27,77 @@ public class SecDbManager extends SecDbUser {
     public static final int TITLE_SIZE = 64;
     public static final int DEPARTMENT_CODE_SIZE = 32;
 
-    @Column(name = "title", length = TITLE_SIZE)
-    private String Title;
+    @Column(name = "title", length = TITLE_SIZE, nullable = false)
+    private String title = "";
 
-    @Column(name = "deptcode", length = DEPARTMENT_CODE_SIZE)
-    private String DepartmentCode;
+    @Column(name = "deptcode", length = DEPARTMENT_CODE_SIZE, nullable = false, unique = true)
+    private String departmentCode = "";
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subdeptof")
-    private SecDbManager SubDepartmentOf;
+    private SecDbManager subDepartmentOf;
 
-    @OneToMany(mappedBy = "SubDepartmentOf", fetch = FetchType.LAZY)
-    private Set<SecDbManager> Departments = new HashSet<>();
+    @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
+    private Set<SecDbManager> departments = new HashSet<>();
 
     public String getTitle() {
-        return Title;
+        return title;
     }
 
     public void setTitle(String title) {
-        this.Title = title;
+        this.title = title;
     }
 
     public String getDepartmentCode() {
-        return DepartmentCode;
+        return departmentCode;
     }
 
     public void setDepartmentCode(String departmentCode) {
-        this.DepartmentCode = departmentCode;
+        this.departmentCode = departmentCode;
     }
 
     public SecDbManager getSubDepartmentOf() {
-        return SubDepartmentOf;
+        return subDepartmentOf;
     }
 
     public void setSubDepartmentOf(SecDbManager subDepartmentOf) {
-        this.SubDepartmentOf = subDepartmentOf;
+        this.subDepartmentOf = subDepartmentOf;
     }
 
     public Set<SecDbManager> getDepartments() {
-        return Departments;
+        return departments;
     }
 
     public void setDepartments(Set<SecDbManager> departments) {
-        this.Departments = departments;
+        this.departments = departments;
     }
 
     public void addDepartment(SecDbManager department) {
         if (department != null) {
-            Departments.add(department);
+            departments.add(department);
             department.setSubDepartmentOf(this);
         }
     }
 
     public void removeDepartment(SecDbManager department) {
         if (department != null) {
-            Departments.remove(department);
+            departments.remove(department);
             department.setSubDepartmentOf(null);
         }
+    }
+
+    @Override
+    public int compareTo(Object o) {
+        if (this == o) return 0;
+        if (!(o instanceof SecDbManager)) return -1;
+        SecDbManager other = (SecDbManager) o;
+        int cmp = super.compareTo(other);
+        if (cmp != 0) return cmp;
+        cmp = (this.title == null && other.title == null) ? 0 : ((this.title != null && this.title.equals(other.title)) ? 0 : (this.title == null ? -1 : (other.title == null ? 1 : this.title.compareTo(other.title))));
+        if (cmp != 0) return cmp;
+        cmp = (this.departmentCode == null && other.departmentCode == null) ? 0 : ((this.departmentCode != null && this.departmentCode.equals(other.departmentCode)) ? 0 : (this.departmentCode == null ? -1 : (other.departmentCode == null ? 1 : this.departmentCode.compareTo(other.departmentCode))));
+        if (cmp != 0) return cmp;
+        cmp = (this.subDepartmentOf == null && other.subDepartmentOf == null) ? 0 : ((this.subDepartmentOf != null && other.subDepartmentOf != null && this.subDepartmentOf.getPId().equals((other.subDepartmentOf.getPId()))) ? 0 : (this.subDepartmentOf == null ? -1 : (other.subDepartmentOf == null ? 1 : this.subDepartmentOf.getPId().compareTo(other.subDepartmentOf.getPId()))));
+        return cmp;
     }
 }
