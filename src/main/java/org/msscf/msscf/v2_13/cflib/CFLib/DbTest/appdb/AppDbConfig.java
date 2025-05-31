@@ -4,6 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperti
 import org.springframework.core.io.ResourceLoader;
 
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 
 import javax.sql.DataSource;
@@ -29,7 +31,6 @@ import java.util.List;
 @EnableTransactionManagement
 public class AppDbConfig {
 
-    @Primary
     @Bean(name = "appDataSource")
     @ConfigurationProperties(prefix = "appdb.datasource")
     public DataSource appDataSource() {
@@ -48,7 +49,10 @@ public class AppDbConfig {
         String dbUser = userProperties.getProperty("appdb.datasource.username");
         String dbPassword = userProperties.getProperty("appdb.datasource.password");
         String dbSchema = userProperties.getProperty("appdb.datasource.hikari.schema");
-        String hkPoolName = userProperties.getProperty("appdb.datasource.pool-name");
+        String hkPoolName = userProperties.getProperty("appdb.datasource.hikari.pool-name");
+
+        // appHikariConfigMXBean.setUsername(dbUser);
+        // appHikariConfigMXBean.setPassword(dbPassword);
 
         HikariConfig config = new HikariConfig();
         //config.setDriverClassName(dbDriver);
@@ -65,7 +69,6 @@ public class AppDbConfig {
         // return DataSourceBuilder.create().build();
     }
 
-    @Primary
     @Bean(name = "appEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(@Qualifier("appDataSource") DataSource appDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
@@ -94,7 +97,6 @@ public class AppDbConfig {
         return em;
     }
 
-    @Primary
     @Bean(name = "appTransactionManager")
     public JpaTransactionManager appTransactionManager(@Qualifier("appEntityManagerFactory") LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
@@ -102,7 +104,6 @@ public class AppDbConfig {
         return transactionManager;
     }
 
-    @Primary
     @Bean(name = "appDbScriptInitializer")
     public SqlDataSourceScriptDatabaseInitializer appDbScriptInitializer(
             @Qualifier("appDataSource") DataSource appDataSource,
@@ -120,14 +121,22 @@ public class AppDbConfig {
 
         SqlInitializationProperties props = new SqlInitializationProperties();
         props.setSchemaLocations(List.of(
-            userProperties.getProperty("appdb.sql.schema-location", "classpath:db/appdb/schema.sql")));
+            userProperties.getProperty("appdb.sql.schema-location", "classpath:db/appdb/schema.pgsql")));
         props.setDataLocations(List.of(
-            userProperties.getProperty("appdb.sql.data-location", "classpath:db/appdb/data.sql")));
+            userProperties.getProperty("appdb.sql.data-location", "classpath:db/appdb/data.pgsql")));
         props.setMode(DatabaseInitializationMode.valueOf(
             userProperties.getProperty("appdb.sql.init-mode", "ALWAYS")));
         props.setContinueOnError(Boolean.parseBoolean(
             userProperties.getProperty("appdb.sql.continue-on-error", "true")));
         
         return new SqlDataSourceScriptDatabaseInitializer(appDataSource, props);
+    }
+
+    @Bean(name = "appHikariConfigMXBean")
+    public HikariConfigMXBean appHikariConfigMXBean(@Qualifier("appDataSource") DataSource appDataSource) {
+        if (appDataSource instanceof HikariDataSource) {
+            return ((HikariDataSource) appDataSource).getHikariConfigMXBean();
+        }
+        throw new IllegalStateException("DataSource is not a HikariDataSource");
     }
 }

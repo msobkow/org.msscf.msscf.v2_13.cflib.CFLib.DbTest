@@ -3,6 +3,8 @@ package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.JpaTransactionManager;
@@ -14,9 +16,11 @@ import org.springframework.boot.autoconfigure.sql.init.SqlInitializationProperti
 import org.springframework.core.io.ResourceLoader;
 
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
 
 import javax.sql.DataSource;
+import javax.xml.crypto.Data;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,6 +32,7 @@ import java.util.List;
 @EnableTransactionManagement
 public class SecDbConfig {
 
+    @Primary
     @Bean(name = "secDataSource")
     @ConfigurationProperties(prefix = "secdb.datasource")
     public DataSource secDataSource() {
@@ -40,16 +45,16 @@ public class SecDbConfig {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        String dbDriver = userProperties.getProperty("secdb.datasource.driver-class-name");
+        // String dbDriver = userProperties.getProperty("secdb.datasource.driver-class-name");
         String dbUrl = userProperties.getProperty("secdb.datasource.jdbc-url");
         // System.setProperty("secdb.datasource.jdbcUrl", dbUrl);
         String dbUser = userProperties.getProperty("secdb.datasource.username");
         String dbPassword = userProperties.getProperty("secdb.datasource.password");
         String dbSchema = userProperties.getProperty("secdb.datasource.hikari.schema");
-        String hkPoolName = userProperties.getProperty("secdb.datasource.pool-name");
-
+        String hkPoolName = userProperties.getProperty("secdb.datasource.hikari.pool-name");
+        
         HikariConfig config = new HikariConfig();
-        config.setDriverClassName(dbDriver);
+        // config.setDriverClassName(dbDriver);
 //        config.setDriverClassName("org.postgresql.ds.PGSimpleDataSource");
         config.setJdbcUrl(dbUrl);
         config.setUsername(dbUser);
@@ -63,6 +68,7 @@ public class SecDbConfig {
         // return DataSourceBuilder.create().build();
     }
 
+    @Primary
     @Bean(name = "secEntityManagerFactory")
     public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(@Qualifier("secDataSource") DataSource secDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
@@ -90,6 +96,7 @@ public class SecDbConfig {
         return em;
     }
 
+    @Primary
     @Bean(name = "secTransactionManager")
     public JpaTransactionManager secTransactionManager(@Qualifier("secEntityManagerFactory") LocalContainerEntityManagerFactoryBean secEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
@@ -97,6 +104,7 @@ public class SecDbConfig {
         return transactionManager;
     }
 
+    @Primary
     @Bean(name = "secDbScriptInitializer")
     public SqlDataSourceScriptDatabaseInitializer secDbScriptInitializer(
             @Qualifier("secDataSource") DataSource secDataSource,
@@ -114,14 +122,23 @@ public class SecDbConfig {
 
         SqlInitializationProperties props = new SqlInitializationProperties();
         props.setSchemaLocations(List.of(
-            userProperties.getProperty("secdb.sql.schema-location", "classpath:db/secdb/schema.sql")));
+            userProperties.getProperty("secdb.sql.schema-location", "classpath:db/secdb/schema.pgsql")));
         props.setDataLocations(List.of(
-            userProperties.getProperty("secdb.sql.data-location", "classpath:db/secdb/data.sql")));
+            userProperties.getProperty("secdb.sql.data-location", "classpath:db/secdb/data.pgsql")));
         props.setMode(DatabaseInitializationMode.valueOf(
             userProperties.getProperty("secdb.sql.init-mode", "ALWAYS")));
         props.setContinueOnError(Boolean.parseBoolean(
             userProperties.getProperty("secdb.sql.continue-on-error", "true")));
         
         return new SqlDataSourceScriptDatabaseInitializer(secDataSource, props);
+    }
+
+    @Primary
+    @Bean(name = "secHikariConfigMXBean")
+    public HikariConfigMXBean secHikariConfigMXBean(@Qualifier("secDataSource") DataSource secDataSource) {
+        if (secDataSource instanceof HikariDataSource) {
+            return ((HikariDataSource) secDataSource).getHikariConfigMXBean();
+        }
+        throw new IllegalStateException("DataSource is not a HikariDataSource");
     }
 }

@@ -39,19 +39,30 @@ import java.util.Properties;
 public class CFDbTest
 {
     public static void main(String[] args) {
+        Properties userProperties = new Properties();
+        File userFile = new File(System.getProperty("user.home"), ".cfdbtest.properties");
+        if (userFile.exists()) {
+            try (FileInputStream fis = new FileInputStream(userFile)) {
+                userProperties.load(fis);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
+            }
+        }
+        System.getProperties().putAll(userProperties);
+
         SpringApplication app = new SpringApplication(CFDbTest.class);
         app.addInitializers((applicationContext) -> {
             ConfigurableEnvironment env = applicationContext.getEnvironment();
-            Properties userProperties = new Properties();
-            File userFile = new File(System.getProperty("user.home"), ".cfdbtest.properties");
-            if (userFile.exists()) {
-                try (FileInputStream fis = new FileInputStream(userFile)) {
-                    userProperties.load(fis);
+            Properties userProps = new Properties();
+            File userF = new File(System.getProperty("user.home"), ".cfdbtest.properties");
+            if (userF.exists()) {
+                try (FileInputStream fis = new FileInputStream(userF)) {
+                    userProps.load(fis);
                 } catch (IOException e) {
                     throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
                 }
             }
-            env.getPropertySources().addLast(new org.springframework.core.env.PropertiesPropertySource("userProperties", userProperties));
+            env.getPropertySources().addLast(new org.springframework.core.env.PropertiesPropertySource("userProperties", userProps));
         });
         app.run(args);
     }
