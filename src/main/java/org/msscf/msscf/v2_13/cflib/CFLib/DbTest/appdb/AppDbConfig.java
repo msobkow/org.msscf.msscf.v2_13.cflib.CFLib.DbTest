@@ -1,6 +1,7 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -18,6 +19,8 @@ import org.springframework.core.io.ResourceLoader;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariConfigMXBean;
 import com.zaxxer.hikari.HikariDataSource;
+
+import jakarta.persistence.EntityManagerFactory;
 
 import javax.sql.DataSource;
 
@@ -39,38 +42,49 @@ public class AppDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        //String dbDriver = userProperties.getProperty("appdb.datasource.driver-class-name");
-        String dbUrl = userProperties.getProperty("appdb.datasource.jdbc-url");
+
+        String dbDriver = System.getProperty("appdb.datasource.driver-class-name");
+        String dbUrl = System.getProperty("appdb.datasource.jdbc-url");
         // System.setProperty("appdb.datasource.jdbcUrl", dbUrl);
-        String dbUser = userProperties.getProperty("appdb.datasource.username");
-        String dbPassword = userProperties.getProperty("appdb.datasource.password");
-        String dbSchema = userProperties.getProperty("appdb.datasource.hikari.schema");
-        String hkPoolName = userProperties.getProperty("appdb.datasource.hikari.pool-name");
+        String dbUser = System.getProperty("appdb.datasource.username");
+        String dbPassword = System.getProperty("appdb.datasource.password");
+        String dbSchema = System.getProperty("appdb.datasource.hikari.schema");
+        String hkPoolName = System.getProperty("appdb.datasource.hikari.pool-name");
 
-        // appHikariConfigMXBean.setUsername(dbUser);
-        // appHikariConfigMXBean.setPassword(dbPassword);
-
-        HikariConfig config = new HikariConfig();
-        //config.setDriverClassName(dbDriver);
-//        config.setDriverClassName("org.postgresql.ds.PGSimpleDataSource");
-        config.setJdbcUrl(dbUrl);
-        config.setUsername(dbUser);
-        config.setPassword(dbPassword);
-        config.setSchema(dbSchema);
-        config.setAutoCommit(false);
-        config.setPoolName(hkPoolName);
-
-        HikariDataSource ds = new HikariDataSource(config);
+        HikariDataSource ds = new HikariDataSource();
+        ds.setDriverClassName(dbDriver);
+        ds.setJdbcUrl(dbUrl);
+        ds.setUsername(dbUser);
+        ds.setPassword(dbPassword);
+        ds.setSchema(dbSchema);
+        ds.setAutoCommit(true);
+        ds.setPoolName(hkPoolName);
+        // ds.setMaximumPoolSize(config.getMaximumPoolSize());
+        // ds.setMinimumIdle(config.getMinimumIdle());
+        // ds.setConnectionTimeout(config.getConnectionTimeout());
+        // ds.setIdleTimeout(config.getIdleTimeout());
+        // ds.setMaxLifetime(config.getMaxLifetime());
+        // ds.setLeakDetectionThreshold(config.getLeakDetectionThreshold());
+        // ds.setInitializationFailTimeout(config.getInitializationFailTimeout());
+        // ds.setConnectionTestQuery(config.getConnectionTestQuery());
+        // ds.setConnectionInitSql(config.getConnectionInitSql());
+        // ds.setDataSourceClassName(config.getDataSourceClassName());
+        // ds.setDriverClassName(config.getDriverClassName());
+        // ds.setCatalog(config.getCatalog());
+        // ds.setTransactionIsolation(config.getTransactionIsolation());
+        // ds.setValidationTimeout(config.getValidationTimeout());
         return ds;
         // return DataSourceBuilder.create().build();
     }
 
     @Bean(name = "appEntityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(@Qualifier("appDataSource") DataSource appDataSource) {
+    @ConfigurationProperties(prefix = "appdb.datasource")
+    public EntityManagerFactory appEntityManagerFactory(@Qualifier("appDataSource") DataSource appDataSource) {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(appDataSource);
         em.setPersistenceUnitName("appPersistenceUnit");
@@ -82,25 +96,26 @@ public class AppDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        String dialect = userProperties.getProperty("appdb.jpa.properties.hibernate.dialect");
-        String ddlAuto = userProperties.getProperty("appdb.jpa.hibernate.ddl-auto");
+        String dialect = System.getProperty("appdb.jpa.properties.hibernate.dialect");
+        String ddlAuto = System.getProperty("appdb.jpa.hibernate.ddl-auto");
 
         Properties jpaProperties = new Properties();
         jpaProperties.put("hibernate.dialect", dialect);
         jpaProperties.put("hibernate.hbm2ddl.auto", ddlAuto);
         em.setJpaProperties(jpaProperties);
 
-        return em;
+        return em.getNativeEntityManagerFactory();
     }
 
     @Bean(name = "appTransactionManager")
-    public JpaTransactionManager appTransactionManager(@Qualifier("appEntityManagerFactory") LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
+    public JpaTransactionManager appTransactionManager(@Qualifier("appEntityManagerFactory") EntityManagerFactory appEntityManagerFactory) {
         JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setEntityManagerFactory(appEntityManagerFactory.getObject());
+        transactionManager.setEntityManagerFactory(appEntityManagerFactory);
         return transactionManager;
     }
 
@@ -114,6 +129,7 @@ public class AppDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
@@ -121,13 +137,13 @@ public class AppDbConfig {
 
         SqlInitializationProperties props = new SqlInitializationProperties();
         props.setSchemaLocations(List.of(
-            userProperties.getProperty("appdb.sql.schema-location", "classpath:db/appdb/schema.pgsql")));
+            System.getProperty("appdb.sql.schema-location", "classpath:db/appdb/schema.pgsql")));
         props.setDataLocations(List.of(
-            userProperties.getProperty("appdb.sql.data-location", "classpath:db/appdb/data.pgsql")));
+            System.getProperty("appdb.sql.data-location", "classpath:db/appdb/data.pgsql")));
         props.setMode(DatabaseInitializationMode.valueOf(
-            userProperties.getProperty("appdb.sql.init-mode", "ALWAYS")));
+            System.getProperty("appdb.sql.init-mode", "ALWAYS")));
         props.setContinueOnError(Boolean.parseBoolean(
-            userProperties.getProperty("appdb.sql.continue-on-error", "true")));
+            System.getProperty("appdb.sql.continue-on-error", "true")));
         
         return new SqlDataSourceScriptDatabaseInitializer(appDataSource, props);
     }

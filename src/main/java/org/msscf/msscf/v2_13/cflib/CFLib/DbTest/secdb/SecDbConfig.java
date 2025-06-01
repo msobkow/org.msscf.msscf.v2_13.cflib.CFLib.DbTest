@@ -1,6 +1,7 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -41,29 +42,84 @@ public class SecDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        // String dbDriver = userProperties.getProperty("secdb.datasource.driver-class-name");
-        String dbUrl = userProperties.getProperty("secdb.datasource.jdbc-url");
-        // System.setProperty("secdb.datasource.jdbcUrl", dbUrl);
-        String dbUser = userProperties.getProperty("secdb.datasource.username");
-        String dbPassword = userProperties.getProperty("secdb.datasource.password");
-        String dbSchema = userProperties.getProperty("secdb.datasource.hikari.schema");
-        String hkPoolName = userProperties.getProperty("secdb.datasource.hikari.pool-name");
-        
-        HikariConfig config = new HikariConfig();
-        // config.setDriverClassName(dbDriver);
-//        config.setDriverClassName("org.postgresql.ds.PGSimpleDataSource");
-        config.setJdbcUrl(dbUrl);
-        config.setUsername(dbUser);
-        config.setPassword(dbPassword);
-        config.setSchema(dbSchema);
-        config.setAutoCommit(false);
-        config.setPoolName(hkPoolName);
+        Properties shortened = new Properties();
+        for (String key : System.getProperties().stringPropertyNames()) {
+            if (key.startsWith("secdb.")) {
+                shortened.put(key.substring("secdb.".length()), System.getProperty(key));
+            }
+            else if (key.startsWith("spring.")) {
+                shortened.put(key, System.getProperty(key));
+            }
+        }
+        Properties noDataSource = new Properties();
+        for (String key : shortened.stringPropertyNames()) {
+            if (key.startsWith("datasource.")) {
+                noDataSource.put(key.substring("datasource.".length()), System.getProperty(key));
+            }
+            else if (key.startsWith("spring.")) {
+                noDataSource.put(key, shortened.getProperty(key));
+            }
+        }   
+        // String dbDriver = System.getProperty("secdb.datasource.driver-class-name", "org.postgresql.Driver");
+        // String dbUrl = System.getProperty("secdb.datasource.jdbc-url");
+        // // System.setProperty("secdb.datasource.jdbcUrl", dbUrl);
+        // String dbUser = System.getProperty("secdb.datasource.username");
+        // String dbPassword = System.getProperty("secdb.datasource.password");
+        // String dbSchema = System.getProperty("secdb.datasource.hikari.schema");
+        // String hkPoolName = System.getProperty("secdb.datasource.hikari.pool-name");
 
-        HikariDataSource ds = new HikariDataSource(config);
+        HikariConfig hikariConfig = new HikariConfig(noDataSource);
+        // hikariConfig.setDriverClassName(dbDriver);
+        // hikariConfig.setJdbcUrl(dbUrl);
+        // hikariConfig.setUsername(dbUser);
+        // hikariConfig.setPassword(dbPassword);
+        // hikariConfig.setSchema(dbSchema);
+        // hikariConfig.setAutoCommit(true);
+        // hikariConfig.setPoolName(hkPoolName);
+        // Uncomment the following lines to set additional HikariCP properties
+        // hikariConfig.setMaximumPoolSize(config.getMaximumPoolSize());
+        // hikariConfig.setMinimumIdle(config.getMinimumIdle());
+        // hikariConfig.setConnectionTimeout(config.getConnectionTimeout());
+        // hikariConfig.setIdleTimeout(config.getIdleTimeout());
+        // hikariConfig.setMaxLifetime(config.getMaxLifetime());
+        // hikariConfig.setLeakDetectionThreshold(config.getLeakDetectionThreshold());
+        // hikariConfig.setInitializationFailTimeout(config.getInitializationFailTimeout());
+        // hikariConfig.setConnectionTestQuery(config.getConnectionTestQuery());
+        // hikariConfig.setConnectionInitSql(config.getConnectionInitSql());
+        // hikariConfig.setDataSourceClassName(config.getDataSourceClassName());
+        // hikariConfig.setDriverClassName(config.getDriverClassName());
+        // hikariConfig.setCatalog(config.getCatalog());
+        // hikariConfig.setTransactionIsolation(config.getTransactionIsolation());
+        // hikariConfig.setValidationTimeout(config.getValidationTimeout());
+
+        // Create and return the HikariDataSource
+        HikariDataSource ds = new HikariDataSource();
+        ds.setDriverClassName(hikariConfig.getDriverClassName());
+        ds.setJdbcUrl(hikariConfig.getJdbcUrl());
+        ds.setUsername(hikariConfig.getUsername());
+        ds.setPassword(hikariConfig.getPassword());
+        ds.setSchema(hikariConfig.getSchema());
+        ds.setAutoCommit(hikariConfig.isAutoCommit());
+        ds.setPoolName(hikariConfig.getPoolName());
+        ds.setMaximumPoolSize(hikariConfig.getMaximumPoolSize());
+        ds.setMinimumIdle(hikariConfig.getMinimumIdle());
+        ds.setConnectionTimeout(hikariConfig.getConnectionTimeout());
+        ds.setIdleTimeout(hikariConfig.getIdleTimeout());
+        ds.setMaxLifetime(hikariConfig.getMaxLifetime());
+        ds.setLeakDetectionThreshold(hikariConfig.getLeakDetectionThreshold());
+        ds.setInitializationFailTimeout(hikariConfig.getInitializationFailTimeout());
+        ds.setConnectionTestQuery(hikariConfig.getConnectionTestQuery());
+        ds.setConnectionInitSql(hikariConfig.getConnectionInitSql());
+        ds.setDataSourceClassName(hikariConfig.getDataSourceClassName());
+        ds.setDriverClassName(hikariConfig.getDriverClassName());
+        ds.setCatalog(hikariConfig.getCatalog());
+        ds.setTransactionIsolation(hikariConfig.getTransactionIsolation());
+        ds.setValidationTimeout(hikariConfig.getValidationTimeout());
         return ds;
         // return DataSourceBuilder.create().build();
     }
@@ -82,12 +138,13 @@ public class SecDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        String dialect = userProperties.getProperty("secdb.jpa.properties.hibernate.dialect");
-        String ddlAuto = userProperties.getProperty("secdb.jpa.hibernate.ddl-auto");
+        String dialect = System.getProperty("secdb.jpa.properties.hibernate.dialect");
+        String ddlAuto = System.getProperty("secdb.jpa.hibernate.ddl-auto");
 
         Properties jpaProperties = new Properties();
         jpaProperties.put("hibernate.dialect", dialect);
@@ -115,6 +172,7 @@ public class SecDbConfig {
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
@@ -122,13 +180,13 @@ public class SecDbConfig {
 
         SqlInitializationProperties props = new SqlInitializationProperties();
         props.setSchemaLocations(List.of(
-            userProperties.getProperty("secdb.sql.schema-location", "classpath:db/secdb/schema.pgsql")));
+            System.getProperty("secdb.sql.schema-location", "classpath:db/secdb/schema.pgsql")));
         props.setDataLocations(List.of(
-            userProperties.getProperty("secdb.sql.data-location", "classpath:db/secdb/data.pgsql")));
+            System.getProperty("secdb.sql.data-location", "classpath:db/secdb/data.pgsql")));
         props.setMode(DatabaseInitializationMode.valueOf(
-            userProperties.getProperty("secdb.sql.init-mode", "ALWAYS")));
+            System.getProperty("secdb.sql.init-mode", "ALWAYS")));
         props.setContinueOnError(Boolean.parseBoolean(
-            userProperties.getProperty("secdb.sql.continue-on-error", "true")));
+            System.getProperty("secdb.sql.continue-on-error", "true")));
         
         return new SqlDataSourceScriptDatabaseInitializer(secDataSource, props);
     }
