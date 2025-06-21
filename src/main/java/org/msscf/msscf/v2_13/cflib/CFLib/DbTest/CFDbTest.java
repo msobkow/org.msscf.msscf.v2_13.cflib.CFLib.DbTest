@@ -44,11 +44,18 @@ public class CFDbTest
         if (userFile.exists()) {
             try (FileInputStream fis = new FileInputStream(userFile)) {
                 userProperties.load(fis);
+                // System.getProperties().putAll(userProperties);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to load user properties from .cfdbtest.properties", e);
             }
         }
-        System.getProperties().putAll(userProperties);
+        else {
+            throw new RuntimeException("No user properties file found at " + userFile.getAbsolutePath());
+        }
+        Properties merged = new Properties();
+        merged.putAll(System.getProperties());
+        merged.putAll(userProperties);
+        System.getProperties().putAll(merged);
 
         SpringApplication app = new SpringApplication(CFDbTest.class);
         app.addInitializers((applicationContext) -> {

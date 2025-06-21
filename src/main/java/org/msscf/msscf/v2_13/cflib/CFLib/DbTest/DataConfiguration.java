@@ -7,13 +7,13 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @Configuration
 @EntityScan(basePackages = {
     "org.msscf.msscf.v2_13.cflib.CFLib.dbutil",
-    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb",
-    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb"
+    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb",
+    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb"
 })
 @EnableJpaRepositories(
     basePackages = {
-        "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb",
-        "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb"
+        "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb",
+        "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb"
     }
 )
 public class DataConfiguration {
