@@ -12,16 +12,16 @@ import jakarta.persistence.Table;
 import java.util.Set;
 import java.util.HashSet;
 
-// import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 
 @Entity
+@DiscriminatorValue("1")
 @Table(
-    name = "sec_mgr",
+    name = "sec_mgr", schema = "secdb",
     indexes = {
         @Index(name = "sec_mgr_deptcode_ax", columnList = "deptcode", unique = true)
     }
 )
-@DiscriminatorValue("1")
 public class SecDbManager extends SecDbUser {
     
     public static final int TITLE_SIZE = 64;
@@ -39,6 +39,60 @@ public class SecDbManager extends SecDbUser {
 
     @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
     private Set<SecDbManager> departments = new HashSet<>();
+
+    public SecDbManager() {
+        super();
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid) {
+        super(pid);
+        this.title = "";
+        this.departmentCode = "";
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, SecDbUser user) {
+        super(pid, user.getUsername(), user.getEmail());
+        this.title = "";
+        this.departmentCode = "";
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, String username, String email) {
+        super(pid, username, email);
+        this.title = "";
+        this.departmentCode = "";
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, String username, String email, String title, String departmentCode) {
+        super(pid, username, email);
+        this.title = title;
+        this.departmentCode = departmentCode;
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, String username, String email, String title, String departmentCode, SecDbManager subDepartmentOf) {
+        super(pid, username, email);
+        this.title = title;
+        this.departmentCode = departmentCode;
+        this.subDepartmentOf = subDepartmentOf;
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, String username, String email, String title, String departmentCode, SecDbManager subDepartmentOf, Set<SecDbManager> departments) {
+        super(pid, username, email);
+        this.title = title;
+        this.departmentCode = departmentCode;
+        this.subDepartmentOf = subDepartmentOf;
+        this.departments = departments != null ? departments : new HashSet<>();
+    }
+
+    public SecDbManager(CFLibDbKeyHash256 pid, String username, String email, String memberDeptCode, String title, String departmentCode,
+                          SecDbManager subDepartmentOf, Set<SecDbManager> departments,
+                          java.time.LocalDateTime createdAt, CFLibDbKeyHash256 createdBy,
+                          java.time.LocalDateTime updatedAt, CFLibDbKeyHash256 updatedBy) {
+        super(pid, username, email, memberDeptCode, createdAt, createdBy, updatedAt, updatedBy);
+        this.title = title;
+        this.departmentCode = departmentCode;
+        this.subDepartmentOf = subDepartmentOf;
+        this.departments = departments != null ? departments : new HashSet<>();
+    }
 
     public String getTitle() {
         return title;
@@ -97,7 +151,7 @@ public class SecDbManager extends SecDbUser {
         if (cmp != 0) return cmp;
         cmp = (this.departmentCode == null && other.departmentCode == null) ? 0 : ((this.departmentCode != null && this.departmentCode.equals(other.departmentCode)) ? 0 : (this.departmentCode == null ? -1 : (other.departmentCode == null ? 1 : this.departmentCode.compareTo(other.departmentCode))));
         if (cmp != 0) return cmp;
-        cmp = (this.subDepartmentOf == null && other.subDepartmentOf == null) ? 0 : ((this.subDepartmentOf != null && other.subDepartmentOf != null && this.subDepartmentOf.getPId().equals((other.subDepartmentOf.getPId()))) ? 0 : (this.subDepartmentOf == null ? -1 : (other.subDepartmentOf == null ? 1 : this.subDepartmentOf.getPId().compareTo(other.subDepartmentOf.getPId()))));
+        cmp = (this.subDepartmentOf == null && other.subDepartmentOf == null) ? 0 : ((this.subDepartmentOf != null && other.subDepartmentOf != null && this.subDepartmentOf.getPid().equals((other.subDepartmentOf.getPid()))) ? 0 : (this.subDepartmentOf == null ? -1 : (other.subDepartmentOf == null ? 1 : this.subDepartmentOf.getPid().compareTo(other.subDepartmentOf.getPid()))));
         return cmp;
     }
 }

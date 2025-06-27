@@ -1,25 +1,26 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
-import org.hibernate.annotations.UpdateTimestamp;
-import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-
 import jakarta.persistence.*;
 
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.annotations.CreationTimestamp;
+
+import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+
 @Entity
-@Table(name = "sec_user")
+@Table(name = "sec_user", schema = "secdb")
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.INTEGER)
 @DiscriminatorValue("0")
 public class SecDbUser implements Comparable<Object> {
-
     public static final int USERNAME_SIZE = 64;
     public static final int EMAIL_SIZE = 1023;
 
     @Id
-    @AttributeOverride(name = "bytes", column = @Column(name = "pid", nullable = false, unique = true))
-    private CFLibDbKeyHash256 PId;
+    @AttributeOverrides({
+        @AttributeOverride(name = "bytes", column = @Column(name = "pid", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+    })
+    private CFLibDbKeyHash256 pid;
 
     @Column(name = "username", nullable = false, unique = true, length = USERNAME_SIZE)
     private String username;
@@ -27,38 +28,74 @@ public class SecDbUser implements Comparable<Object> {
     @Column(name = "email", nullable = false, unique = true, length = EMAIL_SIZE)
     private String email;
 
-    @CreatedDate
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private java.time.LocalDateTime createdAt;
 
-    @CreatedBy
-    @AttributeOverride(name = "bytes", column = @Column(name = "created_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
+    @AttributeOverrides({
+        @AttributeOverride(name = "bytes", column = @Column(name = "created_by", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+    })
     private CFLibDbKeyHash256 createdBy;
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private java.time.LocalDateTime updatedAt;
 
-    @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
+    @AttributeOverrides({
+        @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+    })
     private CFLibDbKeyHash256 updatedBy;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "prev_pid")
-    private SecDbUser prev;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "next_pid")
-    private SecDbUser next;
 
     @Column(name = "member_deptcode", length = 32, nullable = true)
     private String memberDeptCode;
 
-    public CFLibDbKeyHash256 getPId() {
-        return PId;
+    public SecDbUser() {}
+
+    public SecDbUser(CFLibDbKeyHash256 pid) {
+        this.pid = pid;
+        this.username = "";
+        this.email = "";
     }
 
-    public void setPId(CFLibDbKeyHash256 PId) {
-        this.PId = PId;
+    public SecDbUser(CFLibDbKeyHash256 pid, SecDbUser user) {
+        this.pid = pid;
+        this.username = user.getUsername();
+        this.email = user.getEmail();
+        this.memberDeptCode = user.getMemberDeptCode();
+    }
+    
+    public SecDbUser(CFLibDbKeyHash256 pid, String username, String email) {
+        this.pid = pid;
+        this.username = username;
+        this.email = email;
+    }
+
+    public SecDbUser(CFLibDbKeyHash256 pid, String username, String email, String memberDeptCode) {
+        this.pid = pid;
+        this.username = username;
+        this.email = email;
+        this.memberDeptCode = memberDeptCode;
+    }
+
+    public SecDbUser(CFLibDbKeyHash256 pid, String username, String email, String memberDeptCode,
+                     java.time.LocalDateTime createdAt, CFLibDbKeyHash256 createdBy,
+                     java.time.LocalDateTime updatedAt, CFLibDbKeyHash256 updatedBy) {
+        this.pid = pid;
+        this.username = username;
+        this.email = email;
+        this.memberDeptCode = memberDeptCode;
+        this.createdAt = createdAt;
+        this.createdBy = createdBy;
+        this.updatedAt = updatedAt;
+        this.updatedBy = updatedBy;
+    }
+
+    public CFLibDbKeyHash256 getPid() {
+        return pid;
+    }
+
+    public void setPid(CFLibDbKeyHash256 pid) {
+        this.pid = pid;
     }
 
     public String getUsername() {
@@ -75,22 +112,6 @@ public class SecDbUser implements Comparable<Object> {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public SecDbUser getPrev() {
-        return prev;
-    }
-
-    public void setPrev(SecDbUser prev) {
-        this.prev = prev;
-    }
-
-    public SecDbUser getNext() {
-        return next;
-    }
-
-    public void setNext(SecDbUser next) {
-        this.next = next;
     }
     
     public java.time.LocalDateTime getCreatedAt() {
@@ -138,7 +159,7 @@ public class SecDbUser implements Comparable<Object> {
         if (this == o) return 0;
         if (o == null || getClass() != o.getClass()) return 1;
         SecDbUser that = (SecDbUser) o;
-        int cmp = this.PId.compareTo(that.PId);
+        int cmp = this.pid.compareTo(that.pid);
         if (cmp != 0) return cmp;
         cmp = this.username.compareTo(that.username);
         if (cmp != 0) return cmp;
@@ -149,42 +170,7 @@ public class SecDbUser implements Comparable<Object> {
         cmp = ((this.memberDeptCode == null && that.memberDeptCode == null) ? 0 :
                (this.memberDeptCode != null && that.memberDeptCode != null && this.memberDeptCode.equals(that.memberDeptCode)) ? 0 :
                (this.memberDeptCode == null ? -1 : (that.memberDeptCode == null ? 1 : this.memberDeptCode.compareTo(that.memberDeptCode))));
-        if (cmp != 0) return cmp;
-
-        // Compare prev and next users
-        if (this.prev == null && that.prev == null && this.next == null && that.next == null) {
-            return 0;
-        }
-        else if (this.prev == null && that.prev != null) {
-            return -1;
-        } else if (that.prev == null && this.prev != null) {
-            return 1;
-        }
-        else if (this.next == null && that.next != null) {
-            return -1;
-        } else if (that.next == null && this.next != null) {
-            return 1;
-        }
-        if (this.prev == null && that.prev == null) {
-            return 0;
-        } else if (this.prev == null) {
-            return -1;
-        } else if (that.prev == null) {
-            return 1;
-        } else {
-            cmp = this.prev.PId.compareTo(that.prev.PId);
-            if (cmp != 0) return cmp;
-        }
-        if (this.next == null && that.next == null) {
-            return 0;
-        } else if (this.next == null) {
-            return -1;
-        } else if (that.next == null) {
-            return 1;
-        } else {
-            cmp = this.next.PId.compareTo(that.next.PId);
-            return cmp;
-        }
+        return cmp;
     }
 
     @Override
@@ -193,25 +179,19 @@ public class SecDbUser implements Comparable<Object> {
         if (o == null || getClass() != o.getClass()) return false;
 
         SecDbUser that = (SecDbUser) o;
-        return 0 == this.PId.compareTo(that.PId) &&
+        return 0 == this.pid.compareTo(that.pid) &&
                 0 == this.username.compareTo(that.username) &&
                 0 == this.email.compareTo(that.email) &&
                 ((this.memberDeptCode == null && that.memberDeptCode == null) ||
-                 (this.memberDeptCode != null && that.memberDeptCode != null && this.memberDeptCode.equals(that.memberDeptCode))) &&
-                ((this.prev == null && that.prev == null) || 
-                 (this.prev != null && that.prev != null && this.prev.PId.equals(that.prev.PId))) &&
-                ((this.next == null && that.next == null) || 
-                 (this.next != null && that.next != null && this.next.PId.equals(that.next.PId)));
+                 (this.memberDeptCode != null && that.memberDeptCode != null && this.memberDeptCode.equals(that.memberDeptCode)));
     }
 
     @Override
     public final int hashCode() {
-        int hc = PId == null ? 0 : PId.hashCode();
+        int hc = pid == null ? 0 : pid.hashCode();
         hc = 31 * hc + (username == null ? 0 : username.hashCode());
         hc = 31 * hc + (email == null ? 0 : email.hashCode());
         hc = 31 * hc + (memberDeptCode == null ? 0 : memberDeptCode.hashCode());
-        hc = 31 * hc + (prev == null ? 0 : prev.PId.hashCode());
-        hc = 31 * hc + (next == null ? 0 : next.PId.hashCode());
         return hc;
     }
 }
