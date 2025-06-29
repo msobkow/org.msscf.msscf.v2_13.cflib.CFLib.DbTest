@@ -6,6 +6,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.CreationTimestamp;
 
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
 @Table(name = "sec_user", schema = "secdb")
@@ -48,6 +50,10 @@ public class SecDbUser implements Comparable<Object> {
 
     @Column(name = "member_deptcode", length = 32, nullable = true)
     private String memberDeptCode;
+
+    @Autowired
+    @Qualifier("secEntityManagerFactory")
+    private static EntityManagerFactory secEntityManagerFactory;
 
     public SecDbUser() {}
 
@@ -193,5 +199,98 @@ public class SecDbUser implements Comparable<Object> {
         hc = 31 * hc + (email == null ? 0 : email.hashCode());
         hc = 31 * hc + (memberDeptCode == null ? 0 : memberDeptCode.hashCode());
         return hc;
+    }
+
+    public static SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (pid == null) {
+                return null;
+            }
+            SecDbUser user = em.find(SecDbUser.class, pid);
+            return user;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static SecDbUser create(EntityManager em, SecDbUser data) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (data == null) {
+                return null;
+            }
+            if (data.getPid() == null) {
+                data.setPid(new CFLibDbKeyHash256(0));
+            }
+            em.getTransaction().begin();
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
+            if (existing != null) {
+                return existing;
+            }
+            em.persist(data);
+            em.getTransaction().commit();
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+            return data;
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static SecDbUser update(EntityManager em, SecDbUser data) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (data == null) {
+                return null;
+            }
+            if (data.getPid() == null) {
+                throw new IllegalArgumentException("Cannot update SecDbUser with null pid");
+            }
+            em.getTransaction().begin();
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
+            if (existing != null) {
+                data = em.merge(data);
+            }
+            else {
+                em.persist(data);
+            }
+            em.getTransaction().commit();
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+            return data;
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
     }
 }

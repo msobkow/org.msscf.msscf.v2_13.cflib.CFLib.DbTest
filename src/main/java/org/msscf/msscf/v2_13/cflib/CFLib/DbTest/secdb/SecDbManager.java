@@ -3,6 +3,8 @@ package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -13,6 +15,8 @@ import java.util.Set;
 import java.util.HashSet;
 
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
 @DiscriminatorValue("1")
@@ -39,6 +43,10 @@ public class SecDbManager extends SecDbUser {
 
     @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
     private Set<SecDbManager> departments = new HashSet<>();
+
+    @Autowired
+    @Qualifier("secEntityManagerFactory")
+    private static EntityManagerFactory secEntityManagerFactory;
 
     public SecDbManager() {
         super();
@@ -153,5 +161,98 @@ public class SecDbManager extends SecDbUser {
         if (cmp != 0) return cmp;
         cmp = (this.subDepartmentOf == null && other.subDepartmentOf == null) ? 0 : ((this.subDepartmentOf != null && other.subDepartmentOf != null && this.subDepartmentOf.getPid().equals((other.subDepartmentOf.getPid()))) ? 0 : (this.subDepartmentOf == null ? -1 : (other.subDepartmentOf == null ? 1 : this.subDepartmentOf.getPid().compareTo(other.subDepartmentOf.getPid()))));
         return cmp;
+    }
+
+    public static SecDbManager find(EntityManager em, CFLibDbKeyHash256 pid) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (pid == null) {
+                return null;
+            }
+            SecDbManager manager = em.find(SecDbManager.class, pid);
+            return manager;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static SecDbManager create(EntityManager em, SecDbManager data) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (data == null) {
+                return null;
+            }
+            if (data.getPid() == null) {
+                data.setPid(new CFLibDbKeyHash256(0));
+            }
+            em.getTransaction().begin();
+            SecDbManager existing = em.find(SecDbManager.class, data.getPid());
+            if (existing != null) {
+                return existing;
+            }
+            em.persist(data);
+            em.getTransaction().commit();
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+            return data;
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static SecDbManager update(EntityManager em, SecDbManager data) {
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            if (data == null) {
+                return null;
+            }
+            if (data.getPid() == null) {
+                throw new IllegalArgumentException("Cannot update SecDbManager with null pid");
+            }
+            em.getTransaction().begin();
+            SecDbManager existing = em.find(SecDbManager.class, data.getPid());
+            if (existing != null) {
+                data = em.merge(data);
+            }
+            else {
+                em.persist(data);
+            }
+            em.getTransaction().commit();
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+            return data;
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            throw e;
+        } finally {
+            if (newEM && em.isOpen()) {
+                em.close();
+            }
+        }
     }
 }
