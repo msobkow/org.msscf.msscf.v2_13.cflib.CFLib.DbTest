@@ -211,7 +211,7 @@ public class SecDbUser implements Comparable<Object> {
             if (pid == null) {
                 return null;
             }
-            SecDbUser user = em.find(SecDbUser.class, pid);
+            SecDbUser user = em.find(SecDbUser.class, pid.getBytes());
             return user;
         } finally {
             if (newEM && em.isOpen()) {
@@ -234,7 +234,7 @@ public class SecDbUser implements Comparable<Object> {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
             em.getTransaction().begin();
-            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid().getBytes());
             if (existing != null) {
                 return existing;
             }
@@ -270,7 +270,7 @@ public class SecDbUser implements Comparable<Object> {
                 throw new IllegalArgumentException("Cannot update SecDbUser with null pid");
             }
             em.getTransaction().begin();
-            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid().getBytes());
             if (existing != null) {
                 data = em.merge(data);
             }
