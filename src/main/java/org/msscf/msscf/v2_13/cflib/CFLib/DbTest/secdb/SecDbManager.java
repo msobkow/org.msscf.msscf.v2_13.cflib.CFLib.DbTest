@@ -1,5 +1,7 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
+import jakarta.persistence.AttributeOverride;
+import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
@@ -39,6 +41,9 @@ public class SecDbManager extends SecDbUser {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subdeptof")
+    @AttributeOverrides({
+        @AttributeOverride(name = "bytes", column = @Column(name = "subdeptof", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
+    })
     private SecDbManager subDepartmentOf;
 
     @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
@@ -195,20 +200,20 @@ public class SecDbManager extends SecDbUser {
             if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
-            em.getTransaction().begin();
+            // em.getTransaction().begin();
             SecDbManager existing = em.find(SecDbManager.class, data.getPid());
             if (existing != null) {
                 return existing;
             }
             em.persist(data);
-            em.getTransaction().commit();
+            // em.getTransaction().commit();
             if (newEM && em.isOpen()) {
                 em.close();
             }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+                // em.getTransaction().rollback();
             }
             throw e;
         } finally {
@@ -231,7 +236,7 @@ public class SecDbManager extends SecDbUser {
             if (data.getPid() == null) {
                 throw new IllegalArgumentException("Cannot update SecDbManager with null pid");
             }
-            em.getTransaction().begin();
+            // em.getTransaction().begin();
             SecDbManager existing = em.find(SecDbManager.class, data.getPid());
             if (existing != null) {
                 data = em.merge(data);
@@ -239,14 +244,14 @@ public class SecDbManager extends SecDbUser {
             else {
                 em.persist(data);
             }
-            em.getTransaction().commit();
+            // em.getTransaction().commit();
             if (newEM && em.isOpen()) {
                 em.close();
             }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+                // em.getTransaction().rollback();
             }
             throw e;
         } finally {

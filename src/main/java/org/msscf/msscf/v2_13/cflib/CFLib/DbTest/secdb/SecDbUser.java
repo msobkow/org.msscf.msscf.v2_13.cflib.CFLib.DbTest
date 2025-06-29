@@ -11,7 +11,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
 @Table(name = "sec_user", schema = "secdb")
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+@Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.INTEGER)
 @DiscriminatorValue("0")
 public class SecDbUser implements Comparable<Object> {
@@ -35,7 +35,7 @@ public class SecDbUser implements Comparable<Object> {
     private java.time.LocalDateTime createdAt;
 
     @AttributeOverrides({
-        @AttributeOverride(name = "bytes", column = @Column(name = "created_by", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+        @AttributeOverride(name = "bytes", column = @Column(name = "created_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
     })
     private CFLibDbKeyHash256 createdBy;
 
@@ -44,7 +44,7 @@ public class SecDbUser implements Comparable<Object> {
     private java.time.LocalDateTime updatedAt;
 
     @AttributeOverrides({
-        @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+        @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
     })
     private CFLibDbKeyHash256 updatedBy;
 
@@ -211,7 +211,7 @@ public class SecDbUser implements Comparable<Object> {
             if (pid == null) {
                 return null;
             }
-            SecDbUser user = em.find(SecDbUser.class, pid.getBytes());
+            SecDbUser user = em.find(SecDbUser.class, pid);
             return user;
         } finally {
             if (newEM && em.isOpen()) {
@@ -233,20 +233,20 @@ public class SecDbUser implements Comparable<Object> {
             if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
-            em.getTransaction().begin();
-            SecDbUser existing = em.find(SecDbUser.class, data.getPid().getBytes());
+            // em.getTransaction().begin();
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
             if (existing != null) {
                 return existing;
             }
             em.persist(data);
-            em.getTransaction().commit();
+            // em.getTransaction().commit();
             if (newEM && em.isOpen()) {
                 em.close();
             }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+                // em.getTransaction().rollback();
             }
             throw e;
         } finally {
@@ -269,22 +269,22 @@ public class SecDbUser implements Comparable<Object> {
             if (data.getPid() == null) {
                 throw new IllegalArgumentException("Cannot update SecDbUser with null pid");
             }
-            em.getTransaction().begin();
-            SecDbUser existing = em.find(SecDbUser.class, data.getPid().getBytes());
+            // em.getTransaction().begin();
+            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
             if (existing != null) {
                 data = em.merge(data);
             }
             else {
                 em.persist(data);
             }
-            em.getTransaction().commit();
+            // em.getTransaction().commit();
             if (newEM && em.isOpen()) {
                 em.close();
             }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+                // em.getTransaction().rollback();
             }
             throw e;
         } finally {

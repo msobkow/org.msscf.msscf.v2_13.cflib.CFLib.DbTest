@@ -48,7 +48,8 @@ public class SecDbConfig {
 
             config.setMaximumPoolSize(Integer.parseInt(props.getProperty("secdb.hikari.maximumPoolSize", props.getProperty("hikari.maximumPoolSize", "10"))));
             config.setMinimumIdle(Integer.parseInt(props.getProperty("secdb.hikari.minimumIdle", props.getProperty("hikari.minimumIdle", "5"))));
-            config.setPoolName(props.getProperty("secdb.hikari.poolName", props.getProperty("hikari.poolName", "SecDbHikariCP ")));
+            config.setPoolName(props.getProperty("secdb.hikari.poolName", props.getProperty("hikari.poolName", "SecDbHikariCP")));
+            config.setAutoCommit(Boolean.getBoolean(props.getProperty("secdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "true"))));
 
             DataSource ds = new HikariDataSource(config);
             refSecDataSource.compareAndSet(null, ds);

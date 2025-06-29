@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"path": "../org.msscf.msscf.v2_13.cflib.CFLib"
 		}
 	],
 	"settings": {
