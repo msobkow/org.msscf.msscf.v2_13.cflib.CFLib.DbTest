@@ -1,4 +1,4 @@
-package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
+package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import javax.sql.DataSource;
 import jakarta.persistence.EntityManager;
@@ -21,66 +21,66 @@ import org.springframework.core.env.Environment;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 @Configuration
-@EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb")
-public class SecDbConfig {
+@EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb")
+public class AppDbConfig {
 
-    public final static String persistenceUnitName = "SecDbPU";
+    public final static String persistenceUnitName = "AppDbPU";
 
-    private static final AtomicReference<DataSource> refSecDataSource = new AtomicReference<>(null);
-    private static final AtomicReference<Properties> secEntityManagerFactoryProperties = new AtomicReference<>(null);
-    private static final AtomicReference<EntityManagerFactory> refSecEntityManagerFactory = new AtomicReference<>(null);
+    private static final AtomicReference<DataSource> refAppDataSource = new AtomicReference<>(null);
+    private static final AtomicReference<Properties> appEntityManagerFactoryProperties = new AtomicReference<>(null);
+    private static final AtomicReference<EntityManagerFactory> refAppEntityManagerFactory = new AtomicReference<>(null);
 
     @Autowired
-    @Qualifier("secEntityManagerFactory")
+    @Qualifier("appEntityManagerFactory")
     private static EntityManagerFactory emf;
 
-    @Bean(name = "secDataSource")
-    @PersistenceContext(unitName = "SecDbPU")
-    public DataSource secDataSource() {
-        if (refSecDataSource.get() == null) {
+    @Bean(name = "appDataSource")
+    @PersistenceContext(unitName = "AppDbPU")
+    public DataSource appDataSource() {
+        if (refAppDataSource.get() == null) {
             Properties props = DbTest.getMergedProperties();
 
             HikariConfig config = new HikariConfig();
-            config.setDriverClassName(props.getProperty("secdb.jakarta.persistence.jdbc.driver", props.getProperty("jakarta.persistence.jdbc.driver", "org.postgresql.Driver")));
-            config.setJdbcUrl(props.getProperty("secdb.jakarta.persistence.jdbc.url", props.getProperty("jakarta.persistence.jdbc.url", "jdbc:postgresql://localhost:5432/yourdb")));
-            config.setUsername(props.getProperty("secdb.jakarta.persistence.jdbc.user", props.getProperty("jakarta.persistence.jdbc.user", "postgres")));
-            config.setPassword(props.getProperty("secdb.jakarta.persistence.jdbc.password", props.getProperty("jakarta.persistence.jdbc.password", "pgpassword")));
+            config.setDriverClassName(props.getProperty("appdb.jakarta.persistence.jdbc.driver", props.getProperty("jakarta.persistence.jdbc.driver", "org.postgresql.Driver")));
+            config.setJdbcUrl(props.getProperty("appdb.jakarta.persistence.jdbc.url", props.getProperty("jakarta.persistence.jdbc.url", "jdbc:postgresql://localhost:5432/yourdb")));
+            config.setUsername(props.getProperty("appdb.jakarta.persistence.jdbc.user", props.getProperty("jakarta.persistence.jdbc.user", "postgres")));
+            config.setPassword(props.getProperty("appdb.jakarta.persistence.jdbc.password", props.getProperty("jakarta.persistence.jdbc.password", "pgpassword")));
 
-            config.setMaximumPoolSize(Integer.parseInt(props.getProperty("secdb.hikari.maximumPoolSize", props.getProperty("hikari.maximumPoolSize", "10"))));
-            config.setMinimumIdle(Integer.parseInt(props.getProperty("secdb.hikari.minimumIdle", props.getProperty("hikari.minimumIdle", "5"))));
-            config.setPoolName(props.getProperty("secdb.hikari.poolName", props.getProperty("hikari.poolName", "SecDbHikariCP")));
-            config.setAutoCommit(Boolean.getBoolean(props.getProperty("secdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "true"))));
+            config.setMaximumPoolSize(Integer.parseInt(props.getProperty("appdb.hikari.maximumPoolSize", props.getProperty("hikari.maximumPoolSize", "10"))));
+            config.setMinimumIdle(Integer.parseInt(props.getProperty("appdb.hikari.minimumIdle", props.getProperty("hikari.minimumIdle", "5"))));
+            config.setPoolName(props.getProperty("appdb.hikari.poolName", props.getProperty("hikari.poolName", "AppDbHikariCP")));
+            config.setAutoCommit(Boolean.getBoolean(props.getProperty("appdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "true"))));
 
             DataSource ds = new HikariDataSource(config);
-            refSecDataSource.compareAndSet(null, ds);
+            refAppDataSource.compareAndSet(null, ds);
         }
-        return refSecDataSource.get();
+        return refAppDataSource.get();
     }
 
-    public static Properties getSecEntityManagerFactoryProperties() {
-        if (secEntityManagerFactoryProperties.get() == null) {
+    public static Properties getAppEntityManagerFactoryProperties() {
+        if (appEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for secdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
             Properties merged = DbTest.getMergedProperties();
-            String jakartaPersistenceJdbcDriver = merged.getProperty("secdb.jakarta.persistence.jdbc.driver", merged.getProperty("jakarta.persistence.jdbc.driver", null));
-            String jakartaPersistenceJdbcUrl = merged.getProperty("secdb.jakarta.persistence.jdbc.url", merged.getProperty("jakarta.persistence.jdbc.url", "jdbc:postgresql://localhost:5432/dbtestdb"));
-            String jakartaPersistenceJdbcUser = merged.getProperty("secdb.jakarta.persistence.jdbc.user", merged.getProperty("jakarta.persistence.jdbc.user", "postgres"));
-            String jakartaPersistenceJdbcPassword = merged.getProperty("secdb.jakarta.persistence.jdbc.password", merged.getProperty("jakarta.persistence.jdbc.password", "pgpassword"));
-            String jakartaPersistenceSchemaGenerationDatabaseAction = merged.getProperty("secdb.jakarta.persistence.schema-generation.database.action", merged.getProperty("jakarta.persistence.schema-generation.database.action", null));
-            String jakartaPersistenceSchemaGenerationScriptsAction = merged.getProperty("secdb.jakarta.persistence.schema-generation.scripts.action", merged.getProperty("jakarta.persistence.schema-generation.scripts.action", null));
-            String jakartaPersistenceSchemaGenerationCreateSource = merged.getProperty("secdb.jakarta.persistence.schema-generation.create-source", merged.getProperty("jakarta.persistence.schema-generation.create-source", "metadata"));
-            String jakartaPersistenceSchemaGenerationDropSource = merged.getProperty("secdb.jakarta.persistence.schema-generation.drop-source", merged.getProperty("jakarta.persistence.schema-generation.drop-source", "metadata"));
-            String jakartaPersistenceCreateDatabaseSchemas = merged.getProperty("secdb.jakarta.persistence.create-database-schemas", merged.getProperty("jakarta.persistence.create-database-schemas", "true"));
-            String jakartaNonJtaDataSource = merged.getProperty("secdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
-            String jakartaJtaDataSource = merged.getProperty("secdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
-            String hibernateDialect = merged.getProperty("secdb.hibernate.dialect", merged.getProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"));
-            String hibernateHbm2ddlAuto = merged.getProperty("secdb.hibernate.hbm2ddl.auto", merged.getProperty("hibernate.hbm2ddl.auto", "update"));
-            String hibernateShowSql = merged.getProperty("secdb.hibernate.show_sql", merged.getProperty("hibernate.show_sql", "false"));
-            String hibernateFormatSql = merged.getProperty("secdb.hibernate.format_sql", merged.getProperty("hibernate.format_sql", "false"));
-            String hibernateConnectionPoolSize = merged.getProperty("secdb.hibernate.connection_pool_size", merged.getProperty("hibernate.connection_pool_size", "10"));
-            String hibernateConnectionDatasource = merged.getProperty("secdb.hibernate.connection_datasource", merged.getProperty("hibernate.connection_datasource", null));
-            String hibernateCacheRegionFactoryClass = merged.getProperty("secdb.hibernate.cache.region.factory_class", merged.getProperty("hibernate.cache.region.factory_class", null));
-            String hibernateDefaultSchema = merged.getProperty("secdb.hibernate.default_schema", "secdb");
+            String jakartaPersistenceJdbcDriver = merged.getProperty("appdb.jakarta.persistence.jdbc.driver", merged.getProperty("jakarta.persistence.jdbc.driver", null));
+            String jakartaPersistenceJdbcUrl = merged.getProperty("appdb.jakarta.persistence.jdbc.url", merged.getProperty("jakarta.persistence.jdbc.url", "jdbc:postgresql://localhost:5432/dbtestdb"));
+            String jakartaPersistenceJdbcUser = merged.getProperty("appdb.jakarta.persistence.jdbc.user", merged.getProperty("jakarta.persistence.jdbc.user", "postgres"));
+            String jakartaPersistenceJdbcPassword = merged.getProperty("appdb.jakarta.persistence.jdbc.password", merged.getProperty("jakarta.persistence.jdbc.password", "pgpassword"));
+            String jakartaPersistenceSchemaGenerationDatabaseAction = merged.getProperty("appdb.jakarta.persistence.schema-generation.database.action", merged.getProperty("jakarta.persistence.schema-generation.database.action", null));
+            String jakartaPersistenceSchemaGenerationScriptsAction = merged.getProperty("appdb.jakarta.persistence.schema-generation.scripts.action", merged.getProperty("jakarta.persistence.schema-generation.scripts.action", null));
+            String jakartaPersistenceSchemaGenerationCreateSource = merged.getProperty("appdb.jakarta.persistence.schema-generation.create-source", merged.getProperty("jakarta.persistence.schema-generation.create-source", "metadata"));
+            String jakartaPersistenceSchemaGenerationDropSource = merged.getProperty("appdb.jakarta.persistence.schema-generation.drop-source", merged.getProperty("jakarta.persistence.schema-generation.drop-source", "metadata"));
+            String jakartaPersistenceCreateDatabaseSchemas = merged.getProperty("appdb.jakarta.persistence.create-database-schemas", merged.getProperty("jakarta.persistence.create-database-schemas", "true"));
+            String jakartaNonJtaDataSource = merged.getProperty("appdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
+            String jakartaJtaDataSource = merged.getProperty("appdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
+            String hibernateDialect = merged.getProperty("appdb.hibernate.dialect", merged.getProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"));
+            String hibernateHbm2ddlAuto = merged.getProperty("appdb.hibernate.hbm2ddl.auto", merged.getProperty("hibernate.hbm2ddl.auto", "update"));
+            String hibernateShowSql = merged.getProperty("appdb.hibernate.show_sql", merged.getProperty("hibernate.show_sql", "false"));
+            String hibernateFormatSql = merged.getProperty("appdb.hibernate.format_sql", merged.getProperty("hibernate.format_sql", "false"));
+            String hibernateConnectionPoolSize = merged.getProperty("appdb.hibernate.connection_pool_size", merged.getProperty("hibernate.connection_pool_size", "10"));
+            String hibernateConnectionDatasource = merged.getProperty("appdb.hibernate.connection_datasource", merged.getProperty("hibernate.connection_datasource", null));
+            String hibernateCacheRegionFactoryClass = merged.getProperty("appdb.hibernate.cache.region.factory_class", merged.getProperty("hibernate.cache.region.factory_class", null));
+            String hibernateDefaultSchema = merged.getProperty("appdb.hibernate.default_schema", "appdb");
 
             Properties applicable = new Properties();
             if (persistenceUnitName != null && !persistenceUnitName.isEmpty()) {
@@ -146,20 +146,20 @@ public class SecDbConfig {
                 applicable.setProperty("jakarta.persistence.nonJtaDataSource", jakartaNonJtaDataSource);
             }
  
-            secEntityManagerFactoryProperties.compareAndSet(null, applicable);
+            appEntityManagerFactoryProperties.compareAndSet(null, applicable);
         }
-        return secEntityManagerFactoryProperties.get();
+        return appEntityManagerFactoryProperties.get();
     }
 
-    @Bean(name = "secEntityManagerFactory")
-    @PersistenceContext(unitName = "SecDbPU")
-    public EntityManagerFactory createSecEntityManagerFactory(
-        @Qualifier("secDataSource") DataSource secDataSource, Environment env) {
-        if (refSecEntityManagerFactory.get() == null) {
+    @Bean(name = "appEntityManagerFactory")
+    @PersistenceContext(unitName = "AppDbPU")
+    public EntityManagerFactory createAppEntityManagerFactory(
+        @Qualifier("appDataSource") DataSource secDataSource, Environment env) {
+        if (refAppEntityManagerFactory.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                Properties emfProperties = getSecEntityManagerFactoryProperties();
-                System.err.println("Creating secEntityManagerFactory with properties:");
+                Properties emfProperties = getAppEntityManagerFactoryProperties();
+                System.err.println("Creating appEntityManagerFactory with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {
                         String s = (String)value;
@@ -171,21 +171,21 @@ public class SecDbConfig {
                     }
                 });
                 EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName, emfProperties);
-                refSecEntityManagerFactory.compareAndSet(null, emf);
+                refAppEntityManagerFactory.compareAndSet(null, emf);
             } catch (Exception e) {
                 System.err.println("ERROR: Persistence.createEntityManagerFactory(\"" + persistenceUnitName + "\", emfProperties) threw " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 throw e;
             }
         }
-        return refSecEntityManagerFactory.get();
+        return refAppEntityManagerFactory.get();
     }
 
     public static EntityManager getEntityManager() {
         if (emf == null) {
-            emf = refSecEntityManagerFactory.get();
+            emf = refAppEntityManagerFactory.get();
             if (emf == null) {
-                throw new IllegalStateException("EntityManagerFactory is not initialized. Please ensure that SecDbConfig is properly configured.");
+                throw new IllegalStateException("EntityManagerFactory is not initialized. Please ensure that AppDbConfig is properly configured.");
             }
         }
         return emf.createEntityManager();
@@ -199,7 +199,7 @@ public class SecDbConfig {
                 }
             }
             catch (Exception e) {
-                System.err.println("ERROR: Exception " + e.getClass().getCanonicalName() + " caught and ignored during transaction rollback of SecDb entity manager prior to closure: - " + e.getMessage());
+                System.err.println("ERROR: Exception " + e.getClass().getCanonicalName() + " caught and ignored during transaction rollback of AppDb entity manager prior to closure: - " + e.getMessage());
                 e.printStackTrace(System.err);
             }
             em.close(); // Close the EntityManager to release resources

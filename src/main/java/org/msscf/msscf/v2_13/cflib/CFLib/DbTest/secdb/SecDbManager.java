@@ -14,6 +14,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
@@ -48,10 +49,6 @@ public class SecDbManager extends SecDbUser {
 
     @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
     private Set<SecDbManager> departments = new HashSet<>();
-
-    @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private static EntityManagerFactory secEntityManagerFactory;
 
     public SecDbManager() {
         super();
@@ -171,7 +168,7 @@ public class SecDbManager extends SecDbUser {
     public static SecDbManager find(EntityManager em, CFLibDbKeyHash256 pid) {
         boolean newEM = false;
         if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
+            em = SecDbConfig.getEntityManager();
             newEM = true;
         }
         try {
@@ -181,8 +178,8 @@ public class SecDbManager extends SecDbUser {
             SecDbManager manager = em.find(SecDbManager.class, pid);
             return manager;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
+            if (newEM) {
+                SecDbConfig.releaseEntityManager(em);
             }
         }
     }
@@ -190,7 +187,7 @@ public class SecDbManager extends SecDbUser {
     public static SecDbManager create(EntityManager em, SecDbManager data) {
         boolean newEM = false;
         if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
+            em = SecDbConfig.getEntityManager();
             newEM = true;
         }
         try {
@@ -200,6 +197,9 @@ public class SecDbManager extends SecDbUser {
             if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setCreatedAt(now);
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
             SecDbManager existing = em.find(SecDbManager.class, data.getPid());
             if (existing != null) {
@@ -207,18 +207,18 @@ public class SecDbManager extends SecDbUser {
             }
             em.persist(data);
             // em.getTransaction().commit();
-            if (newEM && em.isOpen()) {
-                em.close();
-            }
             return data;
         } catch (Exception e) {
+            if (data != null) {
+                data.setPid(null);
+            }
             if (em.getTransaction().isActive()) {
                 // em.getTransaction().rollback();
             }
             throw e;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
+            if (newEM) {
+                SecDbConfig.releaseEntityManager(em);
             }
         }
     }
@@ -226,7 +226,7 @@ public class SecDbManager extends SecDbUser {
     public static SecDbManager update(EntityManager em, SecDbManager data) {
         boolean newEM = false;
         if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
+            em = SecDbConfig.getEntityManager();
             newEM = true;
         }
         try {
@@ -234,20 +234,13 @@ public class SecDbManager extends SecDbUser {
                 return null;
             }
             if (data.getPid() == null) {
-                throw new IllegalArgumentException("Cannot update SecDbManager with null pid");
+                throw new IllegalArgumentException("Cannot update SecDbManager with null primary identifier (pid)");
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
-            SecDbManager existing = em.find(SecDbManager.class, data.getPid());
-            if (existing != null) {
-                data = em.merge(data);
-            }
-            else {
-                em.persist(data);
-            }
+            data = em.merge(data);
             // em.getTransaction().commit();
-            if (newEM && em.isOpen()) {
-                em.close();
-            }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -255,9 +248,7 @@ public class SecDbManager extends SecDbUser {
             }
             throw e;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
-            }
+            SecDbConfig.releaseEntityManager(em);
         }
     }
 }
