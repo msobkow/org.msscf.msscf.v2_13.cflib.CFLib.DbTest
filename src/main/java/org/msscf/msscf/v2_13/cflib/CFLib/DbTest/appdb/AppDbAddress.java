@@ -9,8 +9,6 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
 @Table(name = "app_addr", schema = "appdb")
@@ -482,6 +480,9 @@ public class AppDbAddress implements Comparable<Object> {
             if (data.getPid() == null || data.getPid().isNull()) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setCreatedAt(now);
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
             AppDbAddress existing = em.find(AppDbAddress.class, data.getPid());
             if (existing != null) {
@@ -515,6 +516,8 @@ public class AppDbAddress implements Comparable<Object> {
             if (data.getPid() == null) {
                 throw new IllegalArgumentException("Cannot update AppDbAddress with null pid");
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
             AppDbAddress existing = em.find(AppDbAddress.class, data.getPid());
             if (existing != null) {

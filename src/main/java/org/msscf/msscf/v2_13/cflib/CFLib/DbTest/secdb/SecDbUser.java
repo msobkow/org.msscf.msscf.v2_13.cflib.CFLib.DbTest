@@ -3,6 +3,9 @@ package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 import jakarta.persistence.*;
 
 import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
 import org.hibernate.annotations.CreationTimestamp;
 
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
@@ -204,7 +207,7 @@ public class SecDbUser implements Comparable<Object> {
     public static SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
         boolean newEM = false;
         if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
+            em = SecDbConfig.getEntityManager();
             newEM = true;
         }
         try {
@@ -214,8 +217,8 @@ public class SecDbUser implements Comparable<Object> {
             SecDbUser user = em.find(SecDbUser.class, pid);
             return user;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
+            if (newEM) {
+                SecDbConfig.releaseEntityManager(em);
             }
         }
     }
@@ -223,7 +226,7 @@ public class SecDbUser implements Comparable<Object> {
     public static SecDbUser create(EntityManager em, SecDbUser data) {
         boolean newEM = false;
         if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
+            em = SecDbConfig.getEntityManager();
             newEM = true;
         }
         try {
@@ -233,6 +236,9 @@ public class SecDbUser implements Comparable<Object> {
             if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setCreatedAt(now);
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
             SecDbUser existing = em.find(SecDbUser.class, data.getPid());
             if (existing != null) {
@@ -240,9 +246,6 @@ public class SecDbUser implements Comparable<Object> {
             }
             em.persist(data);
             // em.getTransaction().commit();
-            if (newEM && em.isOpen()) {
-                em.close();
-            }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -250,8 +253,8 @@ public class SecDbUser implements Comparable<Object> {
             }
             throw e;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
+            if (newEM) {
+                SecDbConfig.releaseEntityManager(em);
             }
         }
     }
@@ -269,6 +272,8 @@ public class SecDbUser implements Comparable<Object> {
             if (data.getPid() == null) {
                 throw new IllegalArgumentException("Cannot update SecDbUser with null pid");
             }
+            LocalDateTime now = LocalDateTime.now();
+            data.setUpdatedAt(now);
             // em.getTransaction().begin();
             SecDbUser existing = em.find(SecDbUser.class, data.getPid());
             if (existing != null) {
@@ -278,9 +283,6 @@ public class SecDbUser implements Comparable<Object> {
                 em.persist(data);
             }
             // em.getTransaction().commit();
-            if (newEM && em.isOpen()) {
-                em.close();
-            }
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
@@ -288,8 +290,8 @@ public class SecDbUser implements Comparable<Object> {
             }
             throw e;
         } finally {
-            if (newEM && em.isOpen()) {
-                em.close();
+            if (newEM) {
+                SecDbConfig.releaseEntityManager(em);
             }
         }
     }

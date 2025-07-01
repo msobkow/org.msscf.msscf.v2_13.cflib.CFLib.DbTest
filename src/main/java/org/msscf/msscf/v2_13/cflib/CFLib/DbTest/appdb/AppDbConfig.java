@@ -59,7 +59,7 @@ public class AppDbConfig {
 
     public static Properties getAppEntityManagerFactoryProperties() {
         if (appEntityManagerFactoryProperties.get() == null) {
-            // Build the effective properties for secdb
+            // Build the effective properties for appdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
             Properties merged = DbTest.getMergedProperties();
             String jakartaPersistenceJdbcDriver = merged.getProperty("appdb.jakarta.persistence.jdbc.driver", merged.getProperty("jakarta.persistence.jdbc.driver", null));
@@ -154,7 +154,7 @@ public class AppDbConfig {
     @Bean(name = "appEntityManagerFactory")
     @PersistenceContext(unitName = "AppDbPU")
     public EntityManagerFactory createAppEntityManagerFactory(
-        @Qualifier("appDataSource") DataSource secDataSource, Environment env) {
+        @Qualifier("appDataSource") DataSource appDataSource, Environment env) {
         if (refAppEntityManagerFactory.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
