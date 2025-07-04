@@ -34,6 +34,11 @@
       <artifactId>spring-boot-starter</artifactId>
       <version>${spring.version}</version>
     </dependency>
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-orm</artifactId>
+        <version>6.2.8</version>
+    </dependency>
     <!-- Do NOT include spring-boot-starter-data-jpa or any spring-boot JPA modules -->
     <!-- Use only the latest stable Jakarta JPA, not the version Spring Boot would default to -->
     <dependency>
