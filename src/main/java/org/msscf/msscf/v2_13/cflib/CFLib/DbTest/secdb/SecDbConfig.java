@@ -17,11 +17,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.Environment;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.cglib.core.Local;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.orm.jpa.JpaTransactionManager;
 
 @Configuration
 @EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb")
+@EnableTransactionManagement
 public class SecDbConfig {
 
     public final static String persistenceUnitName = "SecDbPU";
@@ -31,11 +36,16 @@ public class SecDbConfig {
     private static final AtomicReference<EntityManagerFactory> refSecEntityManagerFactory = new AtomicReference<>(null);
 
     @Autowired
+    @Qualifier("secEntityManagerFactoryProperties")
+    private static Properties emfProperties;
+
+    @Autowired
     @Qualifier("secEntityManagerFactory")
     private static EntityManagerFactory emf;
 
     @Bean(name = "secDataSource")
     @PersistenceContext(unitName = "SecDbPU")
+    @Primary
     public DataSource secDataSource() {
         if (refSecDataSource.get() == null) {
             Properties props = DbTest.getMergedProperties();
@@ -57,6 +67,8 @@ public class SecDbConfig {
         return refSecDataSource.get();
     }
 
+    @Bean(name = "secEntityManagerFactoryProperties")
+    @Primary
     public static Properties getSecEntityManagerFactoryProperties() {
         if (secEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for secdb
@@ -152,13 +164,13 @@ public class SecDbConfig {
     }
 
     @Bean(name = "secEntityManagerFactory")
+    @Primary
     @PersistenceContext(unitName = "SecDbPU")
     public EntityManagerFactory createSecEntityManagerFactory(
-        @Qualifier("secDataSource") DataSource secDataSource, Environment env) {
+        @Qualifier("secDataSource") DataSource secDataSource) {
         if (refSecEntityManagerFactory.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                Properties emfProperties = getSecEntityManagerFactoryProperties();
                 System.err.println("Creating secEntityManagerFactory with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {
@@ -181,34 +193,11 @@ public class SecDbConfig {
         return refSecEntityManagerFactory.get();
     }
 
-    public static EntityManager getEntityManager() {
-        if (emf == null) {
-            emf = refSecEntityManagerFactory.get();
-            if (emf == null) {
-                throw new IllegalStateException("EntityManagerFactory is not initialized. Please ensure that SecDbConfig is properly configured.");
-            }
-        }
-        return emf.createEntityManager();
-    }
-
-    public static void releaseEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            try {
-                if (em.getTransaction().isActive()) {
-                    em.getTransaction().rollback(); // Rollback any active transaction
-                }
-            }
-            catch (Exception e) {
-                System.err.println("ERROR: Exception " + e.getClass().getCanonicalName() + " caught and ignored during transaction rollback of SecDb entity manager prior to closure: - " + e.getMessage());
-                e.printStackTrace(System.err);
-            }
-            em.close(); // Close the EntityManager to release resources
-        }
-    }
-
-    public static void flush() {
-        if (emf != null) {
-            emf.getCache().evictAll(); // Clear the cache to ensure the new entities are visible
-        }
+    @Bean(name = "secTransactionManager")
+    @Primary
+    @PersistenceContext(unitName = "SecDbPU")
+    public JpaTransactionManager secTransactionManager(
+        @Qualifier("secEntityManagerFactory") EntityManagerFactory secEntityManagerFactory) {
+        return new JpaTransactionManager(secEntityManagerFactory);
     }
 }

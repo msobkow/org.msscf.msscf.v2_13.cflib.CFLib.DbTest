@@ -1,17 +1,27 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
 
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
-@Table(name = "app_addr", schema = "appdb")
+@Table(name = "app_addr", schema = "appdb",
+    indexes = {
+        @Index(name = "app_addr_pidx", columnList = "pid", unique = true),
+        @Index(name = "app_addr_axname", columnList = "refuid,addrname", unique = true),
+    }
+)
+@Transactional(Transactional.TxType.SUPPORTS)
 public class AppDbAddress implements Comparable<Object> {
     public static final int ADDR_NAME = 24;
     public static final int ADDR_CONTACT = 64;
@@ -30,7 +40,7 @@ public class AppDbAddress implements Comparable<Object> {
     private CFLibDbKeyHash256 pid;
 
     @AttributeOverrides({
-        @AttributeOverride(name = "bytes", column = @Column(name = "refuid", nullable = false, unique = true, length = CFLibDbKeyHash256.HASH_LENGTH))
+        @AttributeOverride(name = "bytes", column = @Column(name = "refuid", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
     })
     private CFLibDbKeyHash256 refUID;
 
@@ -78,6 +88,10 @@ public class AppDbAddress implements Comparable<Object> {
         @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
     })
     private CFLibDbKeyHash256 updatedBy;
+
+    @Autowired
+    @Qualifier("appEntityManagerFactory")
+    private static EntityManagerFactory appEntityManagerFactory;
 
     public AppDbAddress() {}
 
@@ -360,14 +374,6 @@ public class AppDbAddress implements Comparable<Object> {
         cmp = this.addressCountry == null ? (that.addressCountry == null ? 0 : -1) : (that.addressCountry == null ? 1 : this.addressCountry.compareTo(that.addressCountry));
         if (cmp != 0) return cmp;
         cmp = this.addressPostalCode == null ? (that.addressPostalCode == null ? 0 : -1) : (that.addressPostalCode == null ? 1 : this.addressPostalCode.compareTo(that.addressPostalCode));
-        if (cmp != 0) return cmp;
-        cmp = this.createdAt == null ? (that.createdAt == null ? 0 : -1) : (that.createdAt == null ? 1 : this.createdAt.compareTo(that.createdAt));
-        if (cmp != 0) return cmp;
-        cmp = this.createdBy == null ? (that.createdBy == null ? 0 : -1) : (that.createdBy == null ? 1 : this.createdBy.compareTo(that.createdBy));
-        if (cmp != 0) return cmp;
-        cmp = this.updatedAt == null ? (that.updatedAt == null ? 0 : -1) : (that.updatedAt == null ? 1 : this.updatedAt.compareTo(that.updatedAt));
-        if (cmp != 0) return cmp;
-        cmp = this.updatedBy == null ? (that.updatedBy == null ? 0 : -1) : (that.updatedBy == null ? 1 : this.updatedBy.compareTo(that.updatedBy));
         return cmp;
     }
 
@@ -387,11 +393,7 @@ public class AppDbAddress implements Comparable<Object> {
                (this.addressCity == null ? that.addressCity == null : this.addressCity.equals(that.addressCity)) &&
                (this.addressProvince == null ? that.addressProvince == null : this.addressProvince.equals(that.addressProvince)) &&
                (this.addressCountry == null ? that.addressCountry == null : this.addressCountry.equals(that.addressCountry)) &&
-               (this.addressPostalCode == null ? that.addressPostalCode == null : this.addressPostalCode.equals(that.addressPostalCode)) &&
-               (this.createdAt == null ? that.createdAt == null : this.createdAt.equals(that.createdAt)) &&
-               (this.createdBy == null ? that.createdBy == null : this.createdBy.equals(that.createdBy)) &&
-               (this.updatedAt == null ? that.updatedAt == null : this.updatedAt.equals(that.updatedAt)) &&
-               (this.updatedBy == null ? that.updatedBy == null : this.updatedBy.equals(that.updatedBy));
+               (this.addressPostalCode == null ? that.addressPostalCode == null : this.addressPostalCode.equals(that.addressPostalCode));
     }
 
     @Override
@@ -407,17 +409,14 @@ public class AppDbAddress implements Comparable<Object> {
         hc = 31 * hc + (addressProvince == null ? 0 : addressProvince.hashCode());
         hc = 31 * hc + (addressCountry == null ? 0 : addressCountry.hashCode());
         hc = 31 * hc + (addressPostalCode == null ? 0 : addressPostalCode.hashCode());
-        hc = 31 * hc + (createdAt == null ? 0 : createdAt.hashCode());
-        hc = 31 * hc + (createdBy == null ? 0 : createdBy.hashCode());
-        hc = 31 * hc + (updatedAt == null ? 0 : updatedAt.hashCode());
-        hc = 31 * hc + (updatedBy == null ? 0 : updatedBy.hashCode());
         return hc;
     }
 
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
     public static AppDbAddress find(EntityManager em, CFLibDbKeyHash256 pid) {
         boolean newEM = false;
         if (em == null) {
-            em = AppDbConfig.getEntityManager();
+            em = appEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
@@ -426,58 +425,92 @@ public class AppDbAddress implements Comparable<Object> {
             }
             AppDbAddress addr = em.find(AppDbAddress.class, pid);
             return addr;
-        } catch (NoResultException e) {
-            return null; // No address found
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
-            }
+        }
+        catch (NoResultException e) {
+            return null;
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: AppDbAddress.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instance with pid: " + pid + " - " + e.getMessage());
             throw e;
         } finally {
             if (newEM) {
-                AppDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }
 
-    public static List<AppDbAddress> findByRefUID(EntityManager em, CFLibDbKeyHash256 refUID) {
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
+    public static AppDbAddress findByRefUIDName(EntityManager em, CFLibDbKeyHash256 refUID, String name) {
+        if (refUID == null || refUID.isNull()) {
+            return null;
+        }
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
         boolean newEM = false;
         if (em == null) {
-            em = AppDbConfig.getEntityManager();
+            em = appEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
-            if (refUID == null) {
-                return null;
-            }
-            List<AppDbAddress> addrlist = em.createQuery("SELECT a FROM AppDbAddress a WHERE a.refUID = :refUID", AppDbAddress.class)
-                                  .setParameter("refUID", refUID)
-                                  .getResultList();
-            return addrlist;
-        } catch (NoResultException e) {
-            return null; // No address found
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
-            }
+            AppDbAddress addr = (AppDbAddress)em.createQuery("select u from AppDbAddress u where u.refuid = :refUID and u.addrname = :addrName").setParameter("refUID", refUID).setParameter("addrName", name).getSingleResultOrNull();
+            return addr;
+        }
+        catch (NoResultException e) {
+            return null;
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: AppDbAddress.findByRefUIDName() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instance with RefUID: " + refUID.asString() + ", name: \"" + name + "\" - " + e.getMessage());
             throw e;
         } finally {
             if (newEM) {
-                AppDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }
+
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
+    public static List<AppDbAddress> findByRefUID(EntityManager em, CFLibDbKeyHash256 refUID) {
+        if (refUID == null || refUID.isNull()) {
+            return new ArrayList<>();
+        }
+        boolean newEM = false;
+        if (em == null) {
+            em = appEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            List<AppDbAddress> listOfAddr = (List<AppDbAddress>)em.createQuery("select u from AppDbAddress u where u.refUID = :refUID").setParameter("refUID", refUID).getResultList();
+            if (listOfAddr == null) {
+                listOfAddr = new ArrayList<>();
+            }
+            return listOfAddr;
+        }
+        catch (NoResultException e) {
+            return new ArrayList<>();
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: AppDbAddress.findByRefUID() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instances with refUID: \"" + refUID.asString() + "\" - " + e.getMessage());
+            throw e;
+        } finally {
+            if (newEM) {
+                em.close();
+            }
+        }
+    }
+
+    @Transactional(Transactional.TxType.REQUIRED)
     public static AppDbAddress create(EntityManager em, AppDbAddress data) {
         boolean newEM = false;
         if (em == null) {
-            em = AppDbConfig.getEntityManager();
+            em = appEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
             if (data == null) {
                 return null;
             }
-            if (data.getPid() == null || data.getPid().isNull()) {
+            if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
             }
             LocalDateTime now = LocalDateTime.now();
@@ -493,49 +526,41 @@ public class AppDbAddress implements Comparable<Object> {
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
+                em.getTransaction().rollback();
             }
             throw e;
         } finally {
             if (newEM) {
-                AppDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }
 
+    @Transactional(value = Transactional.TxType.REQUIRED, rollbackOn = NoResultException.class)
     public static AppDbAddress update(EntityManager em, AppDbAddress data) {
         boolean newEM = false;
         if (em == null) {
-            em = AppDbConfig.getEntityManager();
+            em = appEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
             if (data == null) {
                 return null;
             }
-            if (data.getPid() == null) {
-                throw new IllegalArgumentException("Cannot update AppDbAddress with null pid");
+            if (data.getPid() == null || data.getPid().isNull()) {
+                throw new IllegalArgumentException("Cannot update AppDbAddress with null primary identifier (pid)");
             }
             LocalDateTime now = LocalDateTime.now();
             data.setUpdatedAt(now);
-            // em.getTransaction().begin();
-            AppDbAddress existing = em.find(AppDbAddress.class, data.getPid());
-            if (existing != null) {
-                data = em.merge(data);
-            }
-            else {
-                em.persist(data);
-            }
-            // em.getTransaction().commit();
+            data = em.merge(data);
             return data;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
-            }
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: AppDbAddress.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while update AppDbAddress with pid: " + data.getPid() + " - " + e.getMessage());
             throw e;
         } finally {
             if (newEM) {
-                AppDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }

@@ -1,10 +1,13 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
 import jakarta.persistence.*;
+import jakarta.transaction.Transactional;
 
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -13,10 +16,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
-@Table(name = "sec_user", schema = "secdb")
+@Table(
+    name = "sec_user", schema = "secdb",
+    indexes = {
+        @Index(name = "sec_user_pidx", columnList = "pid", unique = true),
+        @Index(name = "sec_user_axname", columnList = "username", unique = true),
+        @Index(name = "sec_user_dxemail", columnList = "email", unique = false),
+        @Index(name = "sec_user_dxmbrdptcd", columnList = "member_deptcode", unique = false),
+    }
+)
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "user_type", discriminatorType = DiscriminatorType.INTEGER)
 @DiscriminatorValue("0")
+@Transactional(Transactional.TxType.SUPPORTS)
 public class SecDbUser implements Comparable<Object> {
     public static final int USERNAME_SIZE = 64;
     public static final int EMAIL_SIZE = 1023;
@@ -30,7 +42,7 @@ public class SecDbUser implements Comparable<Object> {
     @Column(name = "username", nullable = false, unique = true, length = USERNAME_SIZE)
     private String username;
 
-    @Column(name = "email", nullable = false, unique = true, length = EMAIL_SIZE)
+    @Column(name = "email", nullable = false, unique = false, length = EMAIL_SIZE)
     private String email;
 
     @CreationTimestamp
@@ -204,10 +216,11 @@ public class SecDbUser implements Comparable<Object> {
         return hc;
     }
 
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
     public static SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
         boolean newEM = false;
         if (em == null) {
-            em = SecDbConfig.getEntityManager();
+            em = secEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
@@ -216,17 +229,112 @@ public class SecDbUser implements Comparable<Object> {
             }
             SecDbUser user = em.find(SecDbUser.class, pid);
             return user;
+        }
+        catch (NoResultException e) {
+            return null;
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: SecDbUser.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instance with pid: " + pid + " - " + e.getMessage());
+            throw e;
         } finally {
             if (newEM) {
-                SecDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }
 
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
+    public static SecDbUser findByName(EntityManager em, String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            SecDbUser user = (SecDbUser)em.createQuery("select u from SecDbUser u where u.username = :name").setParameter("name", name).getSingleResultOrNull();
+            return user;
+        }
+        catch (NoResultException e) {
+            return null;
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: SecDbUser.findByName() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instance with name: \"" + name + "\" - " + e.getMessage());
+            throw e;
+        } finally {
+            if (newEM) {
+                em.close();
+            }
+        }
+    }
+
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
+    public static List<SecDbUser> findByEmail(EntityManager em, String email) {
+        if (email == null || email.isEmpty()) {
+            return new ArrayList<>();
+        }
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            List<SecDbUser> listOfUser = (List<SecDbUser>)em.createQuery("select u from SecDbUser u where u.email = :email").setParameter("email", email).getResultList();
+            if (listOfUser == null) {
+                listOfUser = new ArrayList<>();
+            }
+            return listOfUser;
+        }
+        catch (NoResultException e) {
+            return new ArrayList<>();
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: SecDbUser.findByEmail() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instances with email: \"" + email + "\" - " + e.getMessage());
+            throw e;
+        } finally {
+            if (newEM) {
+                em.close();
+            }
+        }
+    }
+
+    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
+    public static List<SecDbUser> findByMemberDeptCode(EntityManager em, String memberDeptCode) {
+        if (memberDeptCode == null || memberDeptCode.isEmpty()) {
+            return new ArrayList<>();
+        }
+        boolean newEM = false;
+        if (em == null) {
+            em = secEntityManagerFactory.createEntityManager();
+            newEM = true;
+        }
+        try {
+            List<SecDbUser> listOfUser = (List<SecDbUser>)em.createQuery("select u from SecDbUser u where u.member_deptcode = :deptcode").setParameter("deptcode", memberDeptCode).getResultList();
+            if (listOfUser == null) {
+                listOfUser = new ArrayList<>();
+            }
+            return listOfUser;
+        }
+        catch (NoResultException e) {
+            return new ArrayList<>();
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: SecDbUser.findByMemberDeptCode() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instances with member_deptcode: \"" + memberDeptCode + "\" - " + e.getMessage());
+            throw e;
+        } finally {
+            if (newEM) {
+                em.close();
+            }
+        }
+    }
+
+    @Transactional(Transactional.TxType.REQUIRED)
     public static SecDbUser create(EntityManager em, SecDbUser data) {
         boolean newEM = false;
         if (em == null) {
-            em = SecDbConfig.getEntityManager();
+            em = secEntityManagerFactory.createEntityManager();
             newEM = true;
         }
         try {
@@ -249,16 +357,17 @@ public class SecDbUser implements Comparable<Object> {
             return data;
         } catch (Exception e) {
             if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
+                em.getTransaction().rollback();
             }
             throw e;
         } finally {
             if (newEM) {
-                SecDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }
 
+    @Transactional(value = Transactional.TxType.REQUIRED, rollbackOn = NoResultException.class)
     public static SecDbUser update(EntityManager em, SecDbUser data) {
         boolean newEM = false;
         if (em == null) {
@@ -269,29 +378,20 @@ public class SecDbUser implements Comparable<Object> {
             if (data == null) {
                 return null;
             }
-            if (data.getPid() == null) {
-                throw new IllegalArgumentException("Cannot update SecDbUser with null pid");
+            if (data.getPid() == null || data.getPid().isNull()) {
+                throw new IllegalArgumentException("Cannot update SecDbUser with null primary identifier (pid)");
             }
             LocalDateTime now = LocalDateTime.now();
             data.setUpdatedAt(now);
-            // em.getTransaction().begin();
-            SecDbUser existing = em.find(SecDbUser.class, data.getPid());
-            if (existing != null) {
-                data = em.merge(data);
-            }
-            else {
-                em.persist(data);
-            }
-            // em.getTransaction().commit();
+            data = em.merge(data);
             return data;
-        } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                // em.getTransaction().rollback();
-            }
+        }
+        catch (Exception e) {
+            System.err.println("ERROR: SecDbUser.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while update SecDbUser with pid: " + data.getPid() + " - " + e.getMessage());
             throw e;
         } finally {
             if (newEM) {
-                SecDbConfig.releaseEntityManager(em);
+                em.close();
             }
         }
     }

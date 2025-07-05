@@ -17,11 +17,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
+import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 @Configuration
 @EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb")
+@EnableTransactionManagement
 public class AppDbConfig {
 
     public final static String persistenceUnitName = "AppDbPU";
@@ -29,6 +31,10 @@ public class AppDbConfig {
     private static final AtomicReference<DataSource> refAppDataSource = new AtomicReference<>(null);
     private static final AtomicReference<Properties> appEntityManagerFactoryProperties = new AtomicReference<>(null);
     private static final AtomicReference<EntityManagerFactory> refAppEntityManagerFactory = new AtomicReference<>(null);
+
+    @Autowired
+    @Qualifier("appEntityManagerFactoryProperties")
+    private static Properties emfProperties;
 
     @Autowired
     @Qualifier("appEntityManagerFactory")
@@ -49,7 +55,7 @@ public class AppDbConfig {
             config.setMaximumPoolSize(Integer.parseInt(props.getProperty("appdb.hikari.maximumPoolSize", props.getProperty("hikari.maximumPoolSize", "10"))));
             config.setMinimumIdle(Integer.parseInt(props.getProperty("appdb.hikari.minimumIdle", props.getProperty("hikari.minimumIdle", "5"))));
             config.setPoolName(props.getProperty("appdb.hikari.poolName", props.getProperty("hikari.poolName", "AppDbHikariCP")));
-            config.setAutoCommit(Boolean.getBoolean(props.getProperty("appdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "true"))));
+            config.setAutoCommit(Boolean.getBoolean(props.getProperty("appdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "false"))));
 
             DataSource ds = new HikariDataSource(config);
             refAppDataSource.compareAndSet(null, ds);
@@ -57,6 +63,8 @@ public class AppDbConfig {
         return refAppDataSource.get();
     }
 
+    @Bean(name = "appEntityManagerProperties")
+    @PersistenceContext(unitName = "AppDbPU")
     public static Properties getAppEntityManagerFactoryProperties() {
         if (appEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for appdb
@@ -148,17 +156,19 @@ public class AppDbConfig {
  
             appEntityManagerFactoryProperties.compareAndSet(null, applicable);
         }
+        if (emfProperties == null) {
+            emfProperties = appEntityManagerFactoryProperties.get();
+        }
         return appEntityManagerFactoryProperties.get();
     }
 
     @Bean(name = "appEntityManagerFactory")
     @PersistenceContext(unitName = "AppDbPU")
     public EntityManagerFactory createAppEntityManagerFactory(
-        @Qualifier("appDataSource") DataSource appDataSource, Environment env) {
+        @Qualifier("appDataSource") DataSource appDataSource) {
         if (refAppEntityManagerFactory.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                Properties emfProperties = getAppEntityManagerFactoryProperties();
                 System.err.println("Creating appEntityManagerFactory with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {
@@ -178,37 +188,16 @@ public class AppDbConfig {
                 throw e;
             }
         }
+        if (emf == null) {
+            emf = refAppEntityManagerFactory.get();
+        }
         return refAppEntityManagerFactory.get();
     }
 
-    public static EntityManager getEntityManager() {
-        if (emf == null) {
-            emf = refAppEntityManagerFactory.get();
-            if (emf == null) {
-                throw new IllegalStateException("EntityManagerFactory is not initialized. Please ensure that AppDbConfig is properly configured.");
-            }
-        }
-        return emf.createEntityManager();
-    }
-
-    public static void releaseEntityManager(EntityManager em) {
-        if (em != null && em.isOpen()) {
-            try {
-                if (em.getTransaction().isActive()) {
-                    em.getTransaction().rollback(); // Rollback any active transaction
-                }
-            }
-            catch (Exception e) {
-                System.err.println("ERROR: Exception " + e.getClass().getCanonicalName() + " caught and ignored during transaction rollback of AppDb entity manager prior to closure: - " + e.getMessage());
-                e.printStackTrace(System.err);
-            }
-            em.close(); // Close the EntityManager to release resources
-        }
-    }
-
-    public static void flush() {
-        if (emf != null) {
-            emf.getCache().evictAll(); // Clear the cache to ensure the new entities are visible
-        }
+    @Bean(name = "appTransactionManager")
+    @PersistenceContext(unitName = "AppDbPU")
+    public JpaTransactionManager appTransactionManager(
+        @Qualifier("appEntityManagerFactory") EntityManagerFactory appEntityManagerFactory) {
+        return new JpaTransactionManager(appEntityManagerFactory);
     }
 }
