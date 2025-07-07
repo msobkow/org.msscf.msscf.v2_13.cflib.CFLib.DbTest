@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Table;
 import jakarta.transaction.Transactional;
 
@@ -35,6 +36,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
     }
 )
 @Transactional(Transactional.TxType.SUPPORTS)
+@PersistenceContext(unitName = "SecDbPU")
 public class SecDbManager extends SecDbUser {
     
     public static final int TITLE_SIZE = 64;
@@ -55,10 +57,6 @@ public class SecDbManager extends SecDbUser {
 
     @OneToMany(mappedBy = "subDepartmentOf", fetch = FetchType.LAZY)
     private Set<SecDbManager> departments = new HashSet<>();
-
-    @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private static EntityManagerFactory secEntityManagerFactory;
 
     public SecDbManager() {
         super();
@@ -175,223 +173,4 @@ public class SecDbManager extends SecDbUser {
         return cmp;
     }
 
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public static SecDbManager find(EntityManager em, CFLibDbKeyHash256 pid) {
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            if (pid == null) {
-                return null;
-            }
-            SecDbManager manager = em.find(SecDbManager.class, pid);
-            return manager;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbManager instance with pid: " + pid + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public static SecDbManager findByName(EntityManager em, String name) {
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            SecDbManager manager = (SecDbManager)em.createQuery("select u from SecDbManager u where u.username = :name").setParameter("name", name).getSingleResultOrNull();
-            return manager;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.findByName() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbManager instance with name: \"" + name + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public static List<SecDbUser> findByEmail(EntityManager em, String email) {
-        if (email == null || email.isEmpty()) {
-            return new ArrayList<>();
-        }
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            List<SecDbUser> listOfManager = (List<SecDbUser>)em.createQuery("select u from SecDbManager u where u.email = :email").setParameter("email", email).getResultList();
-            if (listOfManager == null) {
-                listOfManager = new ArrayList<>();
-            }
-            return listOfManager;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.findByEmail() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbManager instances with email: \"" + email + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public static List<SecDbUser> findByMemberDeptCode(EntityManager em, String memberDeptCode) {
-        if (memberDeptCode == null || memberDeptCode.isEmpty()) {
-            return new ArrayList<>();
-        }
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            List<SecDbUser> listOfManager = (List<SecDbUser>)em.createQuery("select u from SecDbManager u where u.member_deptcode = :deptcode").setParameter("deptcode", memberDeptCode).getResultList();
-            if (listOfManager == null) {
-                listOfManager = new ArrayList<>();
-            }
-            return listOfManager;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.findByMemberDeptCode() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbManager instances with member_deptcode: \"" + memberDeptCode + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public static SecDbManager findByDeptCode(EntityManager em, String deptCode) {
-        if (deptCode == null || deptCode.isEmpty()) {
-            return null;
-        }
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            SecDbManager manager = (SecDbManager)em.createQuery("select u from SecDbManager u where u.deptcode = :deptcode").setParameter("deptcode", deptCode).getSingleResultOrNull();
-            return manager;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.findByDeptCode() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbManager instance with deptcode: \"" + deptCode + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-    
-    @Transactional(value = Transactional.TxType.REQUIRED, rollbackOn = NoResultException.class)
-    public static SecDbManager create(EntityManager em, SecDbManager data) {
-        boolean newEM = false;
-        boolean pidAssigned = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            if (data == null) {
-                return null;
-            }
-
-            if (data.getPid() == null || data.getPid().isNull()) {
-                data.setPid(new CFLibDbKeyHash256(0));
-                pidAssigned = true;
-            }
-
-            LocalDateTime now = LocalDateTime.now();
-            data.setCreatedAt(now);
-            data.setUpdatedAt(now);
-
-            SecDbManager existing;
-            try {
-                existing = em.find(SecDbManager.class, data.getPid());
-            } catch (NoResultException e) {
-                existing = null;
-            }
-            if (existing != null) {
-                return existing;
-            }
-
-            em.persist(data);
-
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.create() Caught and rethrew " + e.getClass().getCanonicalName() + " while creating SecDbManager with newly assigned pid: " + data.getPid() + " - " + e.getMessage());
-            if (pidAssigned) {
-                System.err.println("RECOV: Resetting newly assigned pid to null");
-                data.setPid(null);
-            }
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, rollbackOn = NoResultException.class)
-    public static SecDbManager update(EntityManager em, SecDbManager data) {
-        boolean newEM = false;
-        if (em == null) {
-            em = secEntityManagerFactory.createEntityManager();
-            newEM = true;
-        }
-        try {
-            if (data == null) {
-                return null;
-            }
-            if (data.getPid() == null || data.getPid().isNull()) {
-                throw new IllegalArgumentException("Cannot update SecDbManager with null primary identifier (pid)");
-            }
-            LocalDateTime now = LocalDateTime.now();
-            data.setUpdatedAt(now);
-            data = em.merge(data);
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbManager.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while updating SecDbManager with pid: " + data.getPid() + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
 }

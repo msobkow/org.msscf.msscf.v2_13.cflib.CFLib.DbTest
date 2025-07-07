@@ -34,11 +34,11 @@ public class AppDbConfig {
 
     @Autowired
     @Qualifier("appEntityManagerFactoryProperties")
-    private static Properties emfProperties;
+    private Properties emfProperties;
 
     @Autowired
     @Qualifier("appEntityManagerFactory")
-    private static EntityManagerFactory emf;
+    private EntityManagerFactory emf;
 
     @Bean(name = "appDataSource")
     @PersistenceContext(unitName = "AppDbPU")
@@ -65,7 +65,7 @@ public class AppDbConfig {
 
     @Bean(name = "appEntityManagerProperties")
     @PersistenceContext(unitName = "AppDbPU")
-    public static Properties getAppEntityManagerFactoryProperties() {
+    public Properties getAppEntityManagerFactoryProperties() {
         if (appEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for appdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
