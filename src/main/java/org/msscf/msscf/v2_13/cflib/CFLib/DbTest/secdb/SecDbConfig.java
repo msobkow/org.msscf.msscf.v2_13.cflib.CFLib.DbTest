@@ -34,14 +34,6 @@ public class SecDbConfig {
     private static final AtomicReference<Properties> secEntityManagerFactoryProperties = new AtomicReference<>(null);
     private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refSecEntityManagerFactoryBean = new AtomicReference<>(null);
 
-    @Autowired
-    @Qualifier("secEntityManagerFactoryProperties")
-    private static Properties emfProperties;
-
-    @Autowired
-    @Qualifier("secEntityManagerFactoryBean")
-    private static LocalContainerEntityManagerFactoryBean emf;
-
     @Bean(name = "secDataSource")
     @PersistenceContext(unitName = "SecDbPU")
     @Primary
@@ -69,7 +61,7 @@ public class SecDbConfig {
 
     @Bean(name = "secEntityManagerFactoryProperties")
     @Primary
-    public static Properties getSecEntityManagerFactoryProperties() {
+    public Properties secEntityManagerFactoryProperties() {
         if (secEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for secdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
@@ -171,6 +163,7 @@ public class SecDbConfig {
         if (refSecEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
+                Properties emfProperties = secEntityManagerFactoryProperties();
                 System.err.println("Creating secEntityManagerFactory with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {

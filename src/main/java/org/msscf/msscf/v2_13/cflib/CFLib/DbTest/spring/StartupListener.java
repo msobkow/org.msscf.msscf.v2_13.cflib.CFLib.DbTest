@@ -6,22 +6,16 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
-import jakarta.persistence.EntityManagerFactory;
-
 @Component
 public class StartupListener {
 
     @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private EntityManagerFactory secEntityManagerFactory;
-
-    @Autowired
     @Qualifier("TestSecDb")
-    private ITestSecDb testSecDb;
+    private TestSecDb testSecDb;
 
     @Autowired
     @Qualifier("TestAppDb")
-    private ITestAppDb testAppDb;
+    private TestAppDb testAppDb;
 
     @EventListener
     public void onApplicationReady(ApplicationReadyEvent event) {

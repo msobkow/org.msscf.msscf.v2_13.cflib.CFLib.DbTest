@@ -34,14 +34,6 @@ public class AppDbConfig {
     private static final AtomicReference<Properties> appEntityManagerFactoryProperties = new AtomicReference<>(null);
     private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refAppEntityManagerFactoryBean = new AtomicReference<>(null);
 
-    @Autowired
-    @Qualifier("appEntityManagerFactoryProperties")
-    private Properties emfProperties;
-
-    @Autowired
-    @Qualifier("appEntityManagerFactoryBean")
-    private LocalContainerEntityManagerFactoryBean emf;
-
     @Bean(name = "appDataSource")
     @PersistenceContext(unitName = "AppDbPU")
     public DataSource appDataSource() {
@@ -67,7 +59,7 @@ public class AppDbConfig {
 
     @Bean(name = "appEntityManagerProperties")
     @PersistenceContext(unitName = "AppDbPU")
-    public Properties getAppEntityManagerFactoryProperties() {
+    public Properties appEntityManagerFactoryProperties() {
         if (appEntityManagerFactoryProperties.get() == null) {
             // Build the effective properties for appdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
@@ -158,9 +150,6 @@ public class AppDbConfig {
  
             appEntityManagerFactoryProperties.compareAndSet(null, applicable);
         }
-        if (emfProperties == null) {
-            emfProperties = appEntityManagerFactoryProperties.get();
-        }
         return appEntityManagerFactoryProperties.get();
     }
 
@@ -171,6 +160,7 @@ public class AppDbConfig {
         if (refAppEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
+                Properties emfProperties = appEntityManagerFactoryProperties();
                 System.err.println("Creating appEntityManagerFactoryBean with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {
