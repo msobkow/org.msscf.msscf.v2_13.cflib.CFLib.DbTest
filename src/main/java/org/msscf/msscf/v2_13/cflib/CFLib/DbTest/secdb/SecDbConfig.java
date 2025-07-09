@@ -1,7 +1,6 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb;
 
 import javax.sql.DataSource;
-import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.PersistenceContext;
@@ -18,11 +17,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.env.Environment;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
-import org.springframework.cglib.core.Local;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
 @Configuration
 @EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb")
@@ -33,15 +32,15 @@ public class SecDbConfig {
 
     private static final AtomicReference<DataSource> refSecDataSource = new AtomicReference<>(null);
     private static final AtomicReference<Properties> secEntityManagerFactoryProperties = new AtomicReference<>(null);
-    private static final AtomicReference<EntityManagerFactory> refSecEntityManagerFactory = new AtomicReference<>(null);
+    private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refSecEntityManagerFactoryBean = new AtomicReference<>(null);
 
     @Autowired
     @Qualifier("secEntityManagerFactoryProperties")
     private static Properties emfProperties;
 
     @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private static EntityManagerFactory emf;
+    @Qualifier("secEntityManagerFactoryBean")
+    private static LocalContainerEntityManagerFactoryBean emf;
 
     @Bean(name = "secDataSource")
     @PersistenceContext(unitName = "SecDbPU")
@@ -62,6 +61,7 @@ public class SecDbConfig {
             config.setAutoCommit(Boolean.getBoolean(props.getProperty("secdb.hikari.auto-commit", props.getProperty("hikari.auto-commit", "true"))));
 
             DataSource ds = new HikariDataSource(config);
+
             refSecDataSource.compareAndSet(null, ds);
         }
         return refSecDataSource.get();
@@ -163,12 +163,12 @@ public class SecDbConfig {
         return secEntityManagerFactoryProperties.get();
     }
 
-    @Bean(name = "secEntityManagerFactory")
+    @Bean(name = "secEntityManagerFactoryBean")
     @Primary
     @PersistenceContext(unitName = "SecDbPU")
-    public EntityManagerFactory createSecEntityManagerFactory(
+    public LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean(
         @Qualifier("secDataSource") DataSource secDataSource) {
-        if (refSecEntityManagerFactory.get() == null) {
+        if (refSecEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
                 System.err.println("Creating secEntityManagerFactory with properties:");
@@ -182,22 +182,36 @@ public class SecDbConfig {
                         System.err.println("  " + key + " = instanceof(" + classname + ")");
                     }
                 });
-                EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName, emfProperties);
-                refSecEntityManagerFactory.compareAndSet(null, emf);
+
+                // Configure EntityManagerFactoryBean
+                LocalContainerEntityManagerFactoryBean emfBean = new LocalContainerEntityManagerFactoryBean();
+                emfBean.setDataSource(secDataSource);
+                emfBean.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb");
+                emfBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+                emfBean.setJpaProperties(emfProperties);
+                emfBean.setPersistenceUnitName("SecDbPU");
+                refSecEntityManagerFactoryBean.compareAndSet(null, emfBean);
             } catch (Exception e) {
                 System.err.println("ERROR: Persistence.createEntityManagerFactory(\"" + persistenceUnitName + "\", emfProperties) threw " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 throw e;
             }
         }
-        return refSecEntityManagerFactory.get();
+        return refSecEntityManagerFactoryBean.get();
     }
 
     @Bean(name = "secTransactionManager")
     @Primary
     @PersistenceContext(unitName = "SecDbPU")
     public JpaTransactionManager secTransactionManager(
-        @Qualifier("secEntityManagerFactory") EntityManagerFactory secEntityManagerFactory) {
-        return new JpaTransactionManager(secEntityManagerFactory);
+        @Qualifier("secEntityManagerFactoryBean") LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean) {
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
+            if (f != null) {
+                return new JpaTransactionManager(f);
+            }
+            else {
+                System.err.println("ERROR: SecDbConfig.secTransactionManager() secEntityManagerFactoryBean.getObject() returned null");
+                throw new IllegalStateException("secEntityManagerFactoryBean.getObject() returned null");
+            }
     }
 }

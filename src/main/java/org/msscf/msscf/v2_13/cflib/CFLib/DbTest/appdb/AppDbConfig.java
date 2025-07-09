@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.orm.jpa.JpaTransactionManager;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
@@ -30,15 +32,15 @@ public class AppDbConfig {
 
     private static final AtomicReference<DataSource> refAppDataSource = new AtomicReference<>(null);
     private static final AtomicReference<Properties> appEntityManagerFactoryProperties = new AtomicReference<>(null);
-    private static final AtomicReference<EntityManagerFactory> refAppEntityManagerFactory = new AtomicReference<>(null);
+    private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refAppEntityManagerFactoryBean = new AtomicReference<>(null);
 
     @Autowired
     @Qualifier("appEntityManagerFactoryProperties")
     private Properties emfProperties;
 
     @Autowired
-    @Qualifier("appEntityManagerFactory")
-    private EntityManagerFactory emf;
+    @Qualifier("appEntityManagerFactoryBean")
+    private LocalContainerEntityManagerFactoryBean emf;
 
     @Bean(name = "appDataSource")
     @PersistenceContext(unitName = "AppDbPU")
@@ -162,14 +164,14 @@ public class AppDbConfig {
         return appEntityManagerFactoryProperties.get();
     }
 
-    @Bean(name = "appEntityManagerFactory")
+    @Bean(name = "appEntityManagerFactoryBean")
     @PersistenceContext(unitName = "AppDbPU")
-    public EntityManagerFactory createAppEntityManagerFactory(
+    public LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean(
         @Qualifier("appDataSource") DataSource appDataSource) {
-        if (refAppEntityManagerFactory.get() == null) {
+        if (refAppEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                System.err.println("Creating appEntityManagerFactory with properties:");
+                System.err.println("Creating appEntityManagerFactoryBean with properties:");
                 emfProperties.forEach((key, value) -> {
                     if (value instanceof String) {
                         String s = (String)value;
@@ -180,24 +182,35 @@ public class AppDbConfig {
                         System.err.println("  " + key + " = instanceof(" + classname + ")");
                     }
                 });
-                EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistenceUnitName, emfProperties);
-                refAppEntityManagerFactory.compareAndSet(null, emf);
+
+                // Configure EntityManagerFactoryBean
+                LocalContainerEntityManagerFactoryBean emfBean = new LocalContainerEntityManagerFactoryBean();
+                emfBean.setDataSource(appDataSource);
+                emfBean.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb");
+                emfBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
+                emfBean.setJpaProperties(emfProperties);
+                emfBean.setPersistenceUnitName("AppDbPU");
+                refAppEntityManagerFactoryBean.compareAndSet(null, emfBean);
             } catch (Exception e) {
                 System.err.println("ERROR: Persistence.createEntityManagerFactory(\"" + persistenceUnitName + "\", emfProperties) threw " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 throw e;
             }
         }
-        if (emf == null) {
-            emf = refAppEntityManagerFactory.get();
-        }
-        return refAppEntityManagerFactory.get();
+        return refAppEntityManagerFactoryBean.get();
     }
 
     @Bean(name = "appTransactionManager")
     @PersistenceContext(unitName = "AppDbPU")
     public JpaTransactionManager appTransactionManager(
-        @Qualifier("appEntityManagerFactory") EntityManagerFactory appEntityManagerFactory) {
-        return new JpaTransactionManager(appEntityManagerFactory);
+        @Qualifier("appEntityManagerFactoryBean") LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean) {
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f != null) {
+                return new JpaTransactionManager(f);
+            }
+            else {
+                System.err.println("ERROR: AppDbConfig.appTransactionManager() aooEntityManagerFactoryBean.getObject() returned null");
+                throw new IllegalStateException("appEntityManagerFactoryBean.getObject() returned null");
+            }
     }
 }

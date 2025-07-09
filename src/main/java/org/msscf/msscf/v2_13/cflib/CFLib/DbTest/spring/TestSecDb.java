@@ -9,20 +9,22 @@ import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbUser;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.Transactional;
 
 @Service(value="TestSecDb")
 public class TestSecDb implements ITestSecDb {
 
     @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private EntityManagerFactory secEntityManagerFactory;
+    @Qualifier("secEntityManagerFactoryBean")
+    private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
 
     @Autowired
     @Qualifier("secUserService")
@@ -33,17 +35,25 @@ public class TestSecDb implements ITestSecDb {
     private ISecDbManagerService secManagerService;
 
     @Override
-    @Transactional(value = Transactional.TxType.REQUIRES_NEW, dontRollbackOn = NoResultException.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
     @PersistenceContext(unitName = "SecDbPU")
     public String performTests() {
         StringBuffer responseMessage = new StringBuffer();
         EntityManager em = null;
         try {
-            em = secEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: TestSeccDb.performTests() secEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             LocalDateTime now = LocalDateTime.now();
             CFLibDbKeyHash256 adminpid = new CFLibDbKeyHash256("0123456789abcdef");
             CFLibDbKeyHash256 mgrpid = new CFLibDbKeyHash256("fedcba9876543210");
-            SecDbManager manager = SecDbManager.find(em, mgrpid);
+            SecDbManager manager = secManagerService.find(em, mgrpid);
             if (manager == null) {
                 manager = new SecDbManager(mgrpid, "system", "admin", "1", "System Administration", "1",
                           null, null,

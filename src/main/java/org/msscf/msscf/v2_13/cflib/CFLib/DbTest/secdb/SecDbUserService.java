@@ -23,8 +23,8 @@ import jakarta.persistence.PersistenceContext;
 public class SecDbUserService implements ISecDbUserService {
 
     @Autowired
-    @Qualifier("secEntityManagerFactory")
-    private LocalContainerEntityManagerFactoryBean secEntityManagerFactory;
+    @Qualifier("secEntityManagerFactoryBean")
+    private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
     
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
     public SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
@@ -33,9 +33,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.find(em,pid) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.find(em,pid) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }
@@ -68,9 +68,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByName(em,name) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.findByName(em,name) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }
@@ -103,9 +103,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByEmail(em,email) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.findByEmail(em,email) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }
@@ -141,9 +141,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByMemberDeptCode(em,memberDeptCode) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.findByMemberDeptCode(em,memberDeptCode) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }
@@ -179,9 +179,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.create(em,data) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.create(em,data) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }
@@ -227,9 +227,9 @@ public class SecDbUserService implements ISecDbUserService {
         }
         boolean newEM = false;
         if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactory.getObject();
+            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
             if (f == null) {
-                String msg = "ERROR: SecDbUserService.update(em,data) secEntityManagerFactory.getObject() returns null";
+                String msg = "ERROR: SecDbUserService.update(em,data) secEntityManagerFactoryBean.getObject() returns null";
                 System.err.println(msg);
                 throw new IllegalStateException(msg);
             }

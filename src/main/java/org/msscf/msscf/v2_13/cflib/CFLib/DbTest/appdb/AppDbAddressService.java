@@ -12,22 +12,30 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.stereotype.Service;
-
 
 @Service(value="AppDbAddressService")
 @PersistenceContext(unitName = "AppDbPU")
 public class AppDbAddressService implements IAppDbAddressService {
 
     @Autowired
-    @Qualifier("appEntityManagerFactory")
-    private EntityManagerFactory appEntityManagerFactory;
+    @Qualifier("appEntityManagerFactoryBean")
+    private LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean;
 
     @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
     public AppDbAddress find(EntityManager em, CFLibDbKeyHash256 pid) {
         boolean newEM = false;
         if (em == null) {
-            em = appEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: appDbAddressService.find(em,pid) appEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             newEM = true;
         }
         try {
@@ -60,7 +68,15 @@ public class AppDbAddressService implements IAppDbAddressService {
         }
         boolean newEM = false;
         if (em == null) {
-            em = appEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: appDbAddressService.findByRefUIDName(em,refUID,name) appEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             newEM = true;
         }
         try {
@@ -87,7 +103,15 @@ public class AppDbAddressService implements IAppDbAddressService {
         }
         boolean newEM = false;
         if (em == null) {
-            em = appEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: appDbAddressService.findByRefUID(em,refUID) appEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             newEM = true;
         }
         try {
@@ -117,7 +141,15 @@ public class AppDbAddressService implements IAppDbAddressService {
         }
         boolean newEM = false;
         if (em == null) {
-            em = appEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: appDbAddressService.create(em,data) appEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             newEM = true;
         }
         try {
@@ -157,7 +189,15 @@ public class AppDbAddressService implements IAppDbAddressService {
         }
         boolean newEM = false;
         if (em == null) {
-            em = appEntityManagerFactory.createEntityManager();
+            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+            if (f == null) {
+                String msg = "ERROR: appDbAddressService.update(em,data) appEntityManagerFactoryBean.getObject() returns null";
+                System.err.println(msg);
+                throw new IllegalStateException(msg);
+            }
+            else {
+                em = f.createEntityManager();
+            }
             newEM = true;
         }
         try {
