@@ -9,6 +9,7 @@
         <class>org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbSession</class>
         <properties>
             <!-- Example properties, adjust for your DBMS -->
+            <property name="hibernate.transaction.jta.platform" value="org.hibernate.engine.transaction.jta.platform.internal.SpringJtaPlatform"/>
             <property name="jakarta.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/dbtestdb"/>
             <property name="jakarta.persistence.jdbc.user" value="youruser"/>
             <property name="jakarta.persistence.jdbc.password" value="yourpassword"/>

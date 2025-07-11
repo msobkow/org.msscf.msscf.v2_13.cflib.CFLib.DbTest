@@ -1,10 +1,11 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import javax.sql.DataSource;
-import jakarta.persistence.EntityManager;
+
 import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.Persistence;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.UserTransaction;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -13,29 +14,34 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.DbTest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 @Configuration
 @EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb")
 @EnableTransactionManagement
-public class AppDbConfig {
+@EnableJpaRepositories(
+    basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb",
+    entityManagerFactoryRef = "appEntityManagerFactory",
+    transactionManagerRef = "appTransactionManager"
+)public class AppDbConfig {
 
     public final static String persistenceUnitName = "AppDbPU";
 
     private static final AtomicReference<DataSource> refAppDataSource = new AtomicReference<>(null);
-    private static final AtomicReference<Properties> appEntityManagerFactoryProperties = new AtomicReference<>(null);
+    private static final AtomicReference<Properties> appJpaProperties = new AtomicReference<>(null);
     private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refAppEntityManagerFactoryBean = new AtomicReference<>(null);
 
     @Bean(name = "appDataSource")
-    @PersistenceContext(unitName = "AppDbPU")
+    // @PersistenceContext(unitName = "AppDbPU")
     public DataSource appDataSource() {
         if (refAppDataSource.get() == null) {
             Properties props = DbTest.getMergedProperties();
@@ -57,10 +63,10 @@ public class AppDbConfig {
         return refAppDataSource.get();
     }
 
-    @Bean(name = "appEntityManagerProperties")
-    @PersistenceContext(unitName = "AppDbPU")
-    public Properties appEntityManagerFactoryProperties() {
-        if (appEntityManagerFactoryProperties.get() == null) {
+    @Bean(name = "appJpaProperties")
+    // @PersistenceContext(unitName = "AppDbPU")
+    public Properties appJpaProperties() {
+        if (appJpaProperties.get() == null) {
             // Build the effective properties for appdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
             Properties merged = DbTest.getMergedProperties();
@@ -73,8 +79,8 @@ public class AppDbConfig {
             String jakartaPersistenceSchemaGenerationCreateSource = merged.getProperty("appdb.jakarta.persistence.schema-generation.create-source", merged.getProperty("jakarta.persistence.schema-generation.create-source", "metadata"));
             String jakartaPersistenceSchemaGenerationDropSource = merged.getProperty("appdb.jakarta.persistence.schema-generation.drop-source", merged.getProperty("jakarta.persistence.schema-generation.drop-source", "metadata"));
             String jakartaPersistenceCreateDatabaseSchemas = merged.getProperty("appdb.jakarta.persistence.create-database-schemas", merged.getProperty("jakarta.persistence.create-database-schemas", "true"));
-            String jakartaNonJtaDataSource = merged.getProperty("appdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
-            String jakartaJtaDataSource = merged.getProperty("appdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
+            // String jakartaNonJtaDataSource = merged.getProperty("appdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
+            // String jakartaJtaDataSource = merged.getProperty("appdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
             String hibernateDialect = merged.getProperty("appdb.hibernate.dialect", merged.getProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"));
             String hibernateHbm2ddlAuto = merged.getProperty("appdb.hibernate.hbm2ddl.auto", merged.getProperty("hibernate.hbm2ddl.auto", "update"));
             String hibernateShowSql = merged.getProperty("appdb.hibernate.show_sql", merged.getProperty("hibernate.show_sql", "false"));
@@ -83,6 +89,7 @@ public class AppDbConfig {
             String hibernateConnectionDatasource = merged.getProperty("appdb.hibernate.connection_datasource", merged.getProperty("hibernate.connection_datasource", null));
             String hibernateCacheRegionFactoryClass = merged.getProperty("appdb.hibernate.cache.region.factory_class", merged.getProperty("hibernate.cache.region.factory_class", null));
             String hibernateDefaultSchema = merged.getProperty("appdb.hibernate.default_schema", "appdb");
+            // String hibernateTransactionJTAPlatform = merged.getProperty("appdb.hibernate.transaction.jta.platform", merged.getProperty("hibernate.transaction.jta.platform", "org.hibernate.engine.transaction.jta.platform.internal.SpringJtaPlatform"));
 
             Properties applicable = new Properties();
             if (persistenceUnitName != null && !persistenceUnitName.isEmpty()) {
@@ -139,30 +146,35 @@ public class AppDbConfig {
             if (hibernateDefaultSchema != null && !hibernateDefaultSchema.isEmpty()) {
                 applicable.setProperty("hibernate.default_schema", hibernateDefaultSchema);
             }
-            // If you want to use a JTA DataSource, you can set it here
-            if (jakartaJtaDataSource != null && !jakartaJtaDataSource.isEmpty()) {
-                applicable.setProperty("jakarta.persistence.jtaDataSource", jakartaJtaDataSource);
-            }
-            // If you want to use a non-JTA DataSource, you can set it here
-            if (jakartaNonJtaDataSource != null && !jakartaNonJtaDataSource.isEmpty()) {
-                applicable.setProperty("jakarta.persistence.nonJtaDataSource", jakartaNonJtaDataSource);
-            }
- 
-            appEntityManagerFactoryProperties.compareAndSet(null, applicable);
+            // // If you want to use a JTA DataSource, you can set it here
+            // if (jakartaJtaDataSource != null && !jakartaJtaDataSource.isEmpty()) {
+            //     applicable.setProperty("jakarta.persistence.jtaDataSource", jakartaJtaDataSource);
+            // }
+            // // If you want to use a non-JTA DataSource, you can set it here
+            // if (jakartaNonJtaDataSource != null && !jakartaNonJtaDataSource.isEmpty()) {
+            //     applicable.setProperty("jakarta.persistence.nonJtaDataSource", jakartaNonJtaDataSource);
+            // }
+            //  // A JTA implementation is required as a standalone application, but you can use implementations for specific J2EE servers, such as WebLogic, too
+            // if (hibernateTransactionJTAPlatform != null && !hibernateTransactionJTAPlatform.isEmpty()) {
+            //     applicable.setProperty("hibernate.transaction.jta.platform", hibernateTransactionJTAPlatform);
+            // }
+
+            appJpaProperties.compareAndSet(null, applicable);
         }
-        return appEntityManagerFactoryProperties.get();
+        return appJpaProperties.get();
     }
 
-    @Bean(name = "appEntityManagerFactoryBean")
-    @PersistenceContext(unitName = "AppDbPU")
-    public LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean(
-        @Qualifier("appDataSource") DataSource appDataSource) {
-        if (refAppEntityManagerFactoryBean.get() == null) {
+    @Bean(name = "appEntityManagerFactory")
+    // @PersistenceContext(unitName = "AppDbPU")
+    public LocalContainerEntityManagerFactoryBean appEntityManagerFactory(
+        @Qualifier("appDataSource") DataSource appDataSource,
+        @Qualifier("appJpaProperties") Properties appJpaProperties) {
+        // if (refAppEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                Properties emfProperties = appEntityManagerFactoryProperties();
-                System.err.println("Creating appEntityManagerFactoryBean with properties:");
-                emfProperties.forEach((key, value) -> {
+                // Properties emfProperties = appEntityManagerFactoryProperties();
+                System.err.println("Creating appEntityManagerFactory with properties:");
+                appJpaProperties.forEach((key, value) -> {
                     if (value instanceof String) {
                         String s = (String)value;
                         System.err.println("  " + key + " = " + s);
@@ -178,20 +190,21 @@ public class AppDbConfig {
                 emfBean.setDataSource(appDataSource);
                 emfBean.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb");
                 emfBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-                emfBean.setJpaProperties(emfProperties);
+                emfBean.setJpaProperties(appJpaProperties);
                 emfBean.setPersistenceUnitName("AppDbPU");
-                refAppEntityManagerFactoryBean.compareAndSet(null, emfBean);
+                return emfBean;
+                // refAppEntityManagerFactoryBean.compareAndSet(null, emfBean);
             } catch (Exception e) {
                 System.err.println("ERROR: Persistence.createEntityManagerFactory(\"" + persistenceUnitName + "\", emfProperties) threw " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 throw e;
             }
-        }
-        return refAppEntityManagerFactoryBean.get();
+        // }
+        // return refAppEntityManagerFactoryBean.get();
     }
 
     @Bean(name = "appTransactionManager")
-    @PersistenceContext(unitName = "AppDbPU")
+    // @PersistenceContext(unitName = "AppDbPU")
     public JpaTransactionManager appTransactionManager(
         @Qualifier("appEntityManagerFactoryBean") LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean) {
             EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
@@ -199,7 +212,7 @@ public class AppDbConfig {
                 return new JpaTransactionManager(f);
             }
             else {
-                System.err.println("ERROR: AppDbConfig.appTransactionManager() aooEntityManagerFactoryBean.getObject() returned null");
+                System.err.println("ERROR: AppDbConfig.appTransactionManager() appEntityManagerFactoryBean.getObject() returned null");
                 throw new IllegalStateException("appEntityManagerFactoryBean.getObject() returned null");
             }
     }

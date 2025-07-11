@@ -4,6 +4,8 @@ import javax.sql.DataSource;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Persistence;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.TransactionManager;
+import jakarta.transaction.UserTransaction;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,8 +19,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
+import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
@@ -26,16 +30,21 @@ import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 @Configuration
 @EntityScan(basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb")
 @EnableTransactionManagement
+@EnableJpaRepositories(
+    basePackages = "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb",
+    entityManagerFactoryRef = "secEntityManagerFactory",
+    transactionManagerRef = "secTransactionManager"
+)
 public class SecDbConfig {
 
     public final static String persistenceUnitName = "SecDbPU";
 
     private static final AtomicReference<DataSource> refSecDataSource = new AtomicReference<>(null);
-    private static final AtomicReference<Properties> secEntityManagerFactoryProperties = new AtomicReference<>(null);
+    private static final AtomicReference<Properties> secJpaProperties = new AtomicReference<>(null);
     private static final AtomicReference<LocalContainerEntityManagerFactoryBean> refSecEntityManagerFactoryBean = new AtomicReference<>(null);
 
     @Bean(name = "secDataSource")
-    @PersistenceContext(unitName = "SecDbPU")
+    // @PersistenceContext(unitName = "SecDbPU")
     @Primary
     public DataSource secDataSource() {
         if (refSecDataSource.get() == null) {
@@ -59,10 +68,10 @@ public class SecDbConfig {
         return refSecDataSource.get();
     }
 
-    @Bean(name = "secEntityManagerFactoryProperties")
+    @Bean(name = "secJpaProperties")
     @Primary
-    public Properties secEntityManagerFactoryProperties() {
-        if (secEntityManagerFactoryProperties.get() == null) {
+    public Properties secJpaProperties() {
+        if (secJpaProperties.get() == null) {
             // Build the effective properties for secdb
             // The persistence unit name must match the one in your persistence.xml, or you can use a dynamic unit
             Properties merged = DbTest.getMergedProperties();
@@ -75,8 +84,8 @@ public class SecDbConfig {
             String jakartaPersistenceSchemaGenerationCreateSource = merged.getProperty("secdb.jakarta.persistence.schema-generation.create-source", merged.getProperty("jakarta.persistence.schema-generation.create-source", "metadata"));
             String jakartaPersistenceSchemaGenerationDropSource = merged.getProperty("secdb.jakarta.persistence.schema-generation.drop-source", merged.getProperty("jakarta.persistence.schema-generation.drop-source", "metadata"));
             String jakartaPersistenceCreateDatabaseSchemas = merged.getProperty("secdb.jakarta.persistence.create-database-schemas", merged.getProperty("jakarta.persistence.create-database-schemas", "true"));
-            String jakartaNonJtaDataSource = merged.getProperty("secdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
-            String jakartaJtaDataSource = merged.getProperty("secdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
+            // String jakartaNonJtaDataSource = merged.getProperty("secdb.jakarta.persistence.nonJtaDataSource", merged.getProperty("jakarta.persistence.nonJtaDataSource", null));
+            // String jakartaJtaDataSource = merged.getProperty("secdb.jakarta.persistence.jtaDataSource", merged.getProperty("jakarta.persistence.jtaDataSource", null));
             String hibernateDialect = merged.getProperty("secdb.hibernate.dialect", merged.getProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect"));
             String hibernateHbm2ddlAuto = merged.getProperty("secdb.hibernate.hbm2ddl.auto", merged.getProperty("hibernate.hbm2ddl.auto", "update"));
             String hibernateShowSql = merged.getProperty("secdb.hibernate.show_sql", merged.getProperty("hibernate.show_sql", "false"));
@@ -85,6 +94,7 @@ public class SecDbConfig {
             String hibernateConnectionDatasource = merged.getProperty("secdb.hibernate.connection_datasource", merged.getProperty("hibernate.connection_datasource", null));
             String hibernateCacheRegionFactoryClass = merged.getProperty("secdb.hibernate.cache.region.factory_class", merged.getProperty("hibernate.cache.region.factory_class", null));
             String hibernateDefaultSchema = merged.getProperty("secdb.hibernate.default_schema", "secdb");
+            // String hibernateTransactionJTAPlatform = merged.getProperty("secdb.hibernate.transaction.jta.platform", merged.getProperty("hibernate.transaction.jta.platform", "org.hibernate.engine.transaction.jta.platform.internal.SpringJtaPlatform"));
 
             Properties applicable = new Properties();
             if (persistenceUnitName != null && !persistenceUnitName.isEmpty()) {
@@ -141,31 +151,35 @@ public class SecDbConfig {
             if (hibernateDefaultSchema != null && !hibernateDefaultSchema.isEmpty()) {
                 applicable.setProperty("hibernate.default_schema", hibernateDefaultSchema);
             }
-            // If you want to use a JTA DataSource, you can set it here
-            if (jakartaJtaDataSource != null && !jakartaJtaDataSource.isEmpty()) {
-                applicable.setProperty("jakarta.persistence.jtaDataSource", jakartaJtaDataSource);
-            }
-            // If you want to use a non-JTA DataSource, you can set it here
-            if (jakartaNonJtaDataSource != null && !jakartaNonJtaDataSource.isEmpty()) {
-                applicable.setProperty("jakarta.persistence.nonJtaDataSource", jakartaNonJtaDataSource);
-            }
+            // // A JTA implementation is required as a standalone application, but you can use implementations for specific J2EE servers, such as WebLogic, too
+            // if (hibernateTransactionJTAPlatform != null && !hibernateTransactionJTAPlatform.isEmpty()) {
+            //     applicable.setProperty("hibernate.transaction.jta.platform", hibernateTransactionJTAPlatform);
+            // }
+            // // If you want to use a JTA DataSource, you can set it here
+            // if (jakartaJtaDataSource != null && !jakartaJtaDataSource.isEmpty()) {
+            //     applicable.setProperty("jakarta.persistence.jtaDataSource", jakartaJtaDataSource);
+            // }
+            // // If you want to use a non-JTA DataSource, you can set it here
+            // if (jakartaNonJtaDataSource != null && !jakartaNonJtaDataSource.isEmpty()) {
+            //     applicable.setProperty("jakarta.persistence.nonJtaDataSource", jakartaNonJtaDataSource);
+            // }
  
-            secEntityManagerFactoryProperties.compareAndSet(null, applicable);
+            secJpaProperties.compareAndSet(null, applicable);
         }
-        return secEntityManagerFactoryProperties.get();
+        return secJpaProperties.get();
     }
 
-    @Bean(name = "secEntityManagerFactoryBean")
+    @Bean(name = "secEntityManagerFactory")
     @Primary
-    @PersistenceContext(unitName = "SecDbPU")
-    public LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean(
-        @Qualifier("secDataSource") DataSource secDataSource) {
-        if (refSecEntityManagerFactoryBean.get() == null) {
+    // @PersistenceContext(unitName = "SecDbPU")
+    public LocalContainerEntityManagerFactoryBean secEntityManagerFactory(
+        @Qualifier("secDataSource") DataSource secDataSource,
+        @Qualifier("secJpaProperties") Properties secJpaProperties) {
+        // if (refSecEntityManagerFactoryBean.get() == null) {
             // Create the EntityManagerFactory using the Jakarta Persistence API
             try {
-                Properties emfProperties = secEntityManagerFactoryProperties();
                 System.err.println("Creating secEntityManagerFactory with properties:");
-                emfProperties.forEach((key, value) -> {
+                secJpaProperties.forEach((key, value) -> {
                     if (value instanceof String) {
                         String s = (String)value;
                         System.err.println("  " + key + " = " + s);
@@ -181,24 +195,25 @@ public class SecDbConfig {
                 emfBean.setDataSource(secDataSource);
                 emfBean.setPackagesToScan("org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb");
                 emfBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-                emfBean.setJpaProperties(emfProperties);
-                emfBean.setPersistenceUnitName("SecDbPU");
-                refSecEntityManagerFactoryBean.compareAndSet(null, emfBean);
+                emfBean.setJpaProperties(secJpaProperties);
+                emfBean.setPersistenceUnitName(persistenceUnitName);
+                return emfBean;
+                // refSecEntityManagerFactoryBean.compareAndSet(null, emfBean);
             } catch (Exception e) {
                 System.err.println("ERROR: Persistence.createEntityManagerFactory(\"" + persistenceUnitName + "\", emfProperties) threw " + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace(System.err);
                 throw e;
             }
-        }
-        return refSecEntityManagerFactoryBean.get();
+        // }
+        // return refSecEntityManagerFactoryBean.get();
     }
 
     @Bean(name = "secTransactionManager")
     @Primary
-    @PersistenceContext(unitName = "SecDbPU")
+    // @PersistenceContext(unitName = "SecDbPU")
     public JpaTransactionManager secTransactionManager(
-        @Qualifier("secEntityManagerFactoryBean") LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
+        @Qualifier("secEntityManagerFactory") LocalContainerEntityManagerFactoryBean secEntityManagerFactory) {
+            EntityManagerFactory f = secEntityManagerFactory.getObject();
             if (f != null) {
                 return new JpaTransactionManager(f);
             }

@@ -8,8 +8,6 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 @Entity
 @Table(name = "app_addr", schema = "appdb",

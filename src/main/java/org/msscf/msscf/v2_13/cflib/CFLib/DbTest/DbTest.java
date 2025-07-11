@@ -39,9 +39,15 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 @SpringBootApplication
+@ComponentScan(basePackages = {
+    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb",   // for secdb services
+    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb",   // for appdb services
+    "org.msscf.msscf.v2_13.cflib.CFLib.DbTest.spring"   // if you have service beans here
+})
 @EnableAutoConfiguration(exclude = {
     org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration.class,
     org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration.class,

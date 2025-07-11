@@ -13,11 +13,11 @@ import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-@Service(value="AppDbAddressService")
-@PersistenceContext(unitName = "AppDbPU")
-public class AppDbAddressService implements IAppDbAddressService {
+@Service("AppDbAddressService")
+public class AppDbAddressService {
 
     @Autowired
     @Qualifier("appEntityManagerFactoryBean")

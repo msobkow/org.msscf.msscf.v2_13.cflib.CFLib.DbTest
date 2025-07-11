@@ -7,7 +7,7 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-
+import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,8 +18,7 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 
-@Service(value="SecDbManagerService")
-@PersistenceContext(unitName = "SecDbPU")
+@Service("SecDbManagerService")
 public class SecDbManagerService {
 
     @Autowired

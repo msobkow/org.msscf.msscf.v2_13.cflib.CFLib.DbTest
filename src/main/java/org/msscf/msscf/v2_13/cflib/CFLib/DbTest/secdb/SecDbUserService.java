@@ -7,7 +7,8 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,49 +17,20 @@ import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceContext;
 
-@Service(value="SecDbUserService")
-@PersistenceContext(unitName = "SecDbPU")
-public class SecDbUserService implements ISecDbUserService {
+@Service("SecDbUserService")
+public class SecDbUserService {
 
     @Autowired
-    @Qualifier("secEntityManagerFactoryBean")
-    private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
+    @Qualifier("secEntityManagerFactory")
+    private LocalContainerEntityManagerFactoryBean secEntityManagerFactory;
     
+    @Autowired
+    private SecDbUserRepository secDbUserRepository;
+
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
     public SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
-        if (pid == null) {
-            return null;
-        }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.find(em,pid) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            SecDbUser user = em.find(SecDbUser.class, pid);
-            return user;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instance with pid: " + pid + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+        return secDbUserRepository.findById(pid).orElse(null);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
@@ -66,34 +38,16 @@ public class SecDbUserService implements ISecDbUserService {
         if (name == null || name.isEmpty()) {
             return null;
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByName(em,name) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            SecDbUser user = (SecDbUser)em.createQuery("select u from SecDbUser u where u.username = :name").setParameter("name", name).getSingleResultOrNull();
-            return user;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.findByName() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instance with name: \"" + name + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+        SecDbUser probe = new SecDbUser();
+        probe.setUsername(name);
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+            .withIgnoreNullValues()
+            .withMatcher("username", ExampleMatcher.GenericPropertyMatchers.exact());
+
+        Example<SecDbUser> example = Example.of(probe, matcher);
+
+        return secDbUserRepository.findOne(example).orElse(null);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
@@ -101,37 +55,7 @@ public class SecDbUserService implements ISecDbUserService {
         if (email == null || email.isEmpty()) {
             return new ArrayList<>();
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByEmail(em,email) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            List<SecDbUser> listOfUser = (List<SecDbUser>)em.createQuery("select u from SecDbUser u where u.email = :email").setParameter("email", email).getResultList();
-            if (listOfUser == null) {
-                listOfUser = new ArrayList<>();
-            }
-            return listOfUser;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.findByEmail() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instances with email: \"" + email + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+        return secDbUserRepository.findByEmail(email);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
@@ -139,118 +63,63 @@ public class SecDbUserService implements ISecDbUserService {
         if (memberDeptCode == null || memberDeptCode.isEmpty()) {
             return new ArrayList<>();
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.findByMemberDeptCode(em,memberDeptCode) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            List<SecDbUser> listOfUser = (List<SecDbUser>)em.createQuery("select u from SecDbUser u where u.member_deptcode = :deptcode").setParameter("deptcode", memberDeptCode).getResultList();
-            if (listOfUser == null) {
-                listOfUser = new ArrayList<>();
-            }
-            return listOfUser;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.findByMemberDeptCode() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbUser instances with member_deptcode: \"" + memberDeptCode + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+        return secDbUserRepository.findByMemberDeptCode(memberDeptCode);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbUser create(EntityManager em, SecDbUser data) {
+    public SecDbUser create(SecDbUser data) {
         if (data == null) {
             return null;
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.create(em,data) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
+        CFLibDbKeyHash256 originalPid = data.getPid();
+        boolean generatedPid = false;
         try {
             if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
+                generatedPid = true;
             }
             LocalDateTime now = LocalDateTime.now();
             data.setCreatedAt(now);
             data.setUpdatedAt(now);
-            try {
-                SecDbUser existing = em.find(SecDbUser.class, data.getPid());
-                if (existing != null) {
-                    return existing;
-                }
+
+            // Check if already exists
+            if (data.getPid() != null && secDbUserRepository.existsById(data.getPid())) {
+                return secDbUserRepository.findById(data.getPid()).orElse(null);
             }
-            catch( NoResultException ex) {
-            }
-            em.persist(data);
-            return data;
+
+            return secDbUserRepository.save(data);
         } catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.create(em,data) Caught and rethrew " + e.getClass().getCanonicalName() + " while creating SecDbUser instance with pid: " + data.getPid().asString() + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
+            // Remove auto-generated pid if there was an error
+            if (generatedPid) {
+                data.setPid(null);
             }
+            System.err.println("ERROR: SecDbUserService.create(data) Caught and rethrew " + e.getClass().getCanonicalName() +
+                " while creating SecDbUser instance with pid: " +
+                (data.getPid() != null ? data.getPid().asString() : "null") + " - " + e.getMessage());
+            throw e;
         }
     }
 
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbUser update(EntityManager em, SecDbUser data) {
+    public SecDbUser update(SecDbUser data) {
         if (data == null) {
             return null;
         }
         if (data.getPid() == null || data.getPid().isNull()) {
             throw new IllegalArgumentException("Cannot update SecDbUser with null primary identifier (pid)");
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbUserService.update(em,data) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            LocalDateTime now = LocalDateTime.now();
-            data.setUpdatedAt(now);
-            data = em.merge(data);
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbUserService.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while update SecDbUser with pid: " + data.getPid() + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+
+        // Check if the entity exists
+        SecDbUser existing = secDbUserRepository.findById(data.getPid())
+            .orElseThrow(() -> new NoResultException("SecDbUser with pid " + data.getPid() + " does not exist"));
+
+        // Update fields (except pid, createdAt)
+        existing.setUsername(data.getUsername());
+        existing.setEmail(data.getEmail());
+        existing.setMemberDeptCode(data.getMemberDeptCode());
+        // ... update other fields as needed ...
+        existing.setUpdatedAt(LocalDateTime.now());
+
+        return secDbUserRepository.save(existing);
     }
 }
