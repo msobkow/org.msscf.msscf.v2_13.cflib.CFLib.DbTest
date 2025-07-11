@@ -202,8 +202,8 @@ import org.springframework.boot.autoconfigure.domain.EntityScan;
     @Bean(name = "appTransactionManager")
     // @PersistenceContext(unitName = "AppDbPU")
     public JpaTransactionManager appTransactionManager(
-        @Qualifier("appEntityManagerFactoryBean") LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
+        @Qualifier("appEntityManagerFactory") LocalContainerEntityManagerFactoryBean appEntityManagerFactory) {
+            EntityManagerFactory f = appEntityManagerFactory.getObject();
             if (f != null) {
                 return new JpaTransactionManager(f);
             }

@@ -9,5 +9,4 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SecDbManagerRepository extends JpaRepository<SecDbManager, CFLibDbKeyHash256> {
     List<SecDbManager> findByEmail(String email);
     List<SecDbManager> findByMemberDeptCode(String memberDeptCode);
-    Optional<SecDbManager> findByDeptcode(String deptcode);
 }

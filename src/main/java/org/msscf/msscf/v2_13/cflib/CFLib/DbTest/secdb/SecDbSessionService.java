@@ -8,6 +8,8 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +22,7 @@ import jakarta.persistence.NoResultException;
 public class SecDbSessionService {
 
     @Autowired
-    @Qualifier("secEntityManagerFactoryBean")
+    @Qualifier("secEntityManagerFactory")
     private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
     
     @Autowired
@@ -34,10 +36,18 @@ public class SecDbSessionService {
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
     public List<SecDbSession> findByUser(SecDbUser user) {
         if (user == null || user.getPid() == null || user.getPid().isNull()) {
-            return new ArrayList<>();
+            return null;
         }
-        return secDbSessionRepository.findByUser(user);
+        SecDbSession probe = new SecDbSession();
+        probe.setSecUser(user);
 
+        ExampleMatcher matcher = ExampleMatcher.matching()
+            .withIgnoreNullValues()
+            .withMatcher("secuser_pid", ExampleMatcher.GenericPropertyMatchers.exact());
+
+        Example<SecDbSession> example = Example.of(probe, matcher);
+
+        return secDbSessionRepository.findAll(example);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")

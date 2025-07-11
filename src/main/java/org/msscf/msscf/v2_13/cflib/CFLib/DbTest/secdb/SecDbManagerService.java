@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,7 +25,7 @@ import jakarta.persistence.PersistenceContext;
 public class SecDbManagerService {
 
     @Autowired
-    @Qualifier("secEntityManagerFactoryBean")
+    @Qualifier("secEntityManagerFactory")
     private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
     
     @Autowired
@@ -73,11 +74,20 @@ public class SecDbManagerService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbManager findByDeptCode(String deptCode) {
+    public List<SecDbManager> findByDeptCode(String deptCode) {
         if (deptCode == null || deptCode.isEmpty()) {
             return null;
         }
-        return secDbManagerRepository.findByDeptcode(deptCode).orElse(null);
+        SecDbManager probe = new SecDbManager();
+        probe.setDepartmentCode(deptCode);
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+            .withIgnoreNullValues()
+            .withMatcher("deptcode", ExampleMatcher.GenericPropertyMatchers.exact());
+
+        Example<SecDbManager> example = Example.of(probe, matcher);
+
+        return secDbManagerRepository.findAll(example);
     }
     
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")

@@ -25,7 +25,7 @@ import jakarta.transaction.Transactional;
 public class TestAppDb {
 
     @Autowired
-    @Qualifier("appEntityManagerFactoryBean")
+    @Qualifier("appEntityManagerFactory")
     private LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean;
 
     @Autowired

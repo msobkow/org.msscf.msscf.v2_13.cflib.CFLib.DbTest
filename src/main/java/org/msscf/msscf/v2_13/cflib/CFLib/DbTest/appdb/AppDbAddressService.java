@@ -20,18 +20,18 @@ import jakarta.persistence.NoResultException;
 public class AppDbAddressService {
 
     @Autowired
-    @Qualifier("appEntityManagerFactoryBean")
-    private LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean;
+    @Qualifier("appEntityManagerFactory")
+    private LocalContainerEntityManagerFactoryBean appEntityManagerFactory;
     
     @Autowired
     private AppDbAddressRepository appDbAddressRepository;
 
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress find(CFLibDbKeyHash256 pid) {
         return appDbAddressRepository.findById(pid).orElse(null);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public List<AppDbAddress> findByRefUID(CFLibDbKeyHash256 refUID) {
         if (refUID == null || refUID.isNull()) {
             return new ArrayList<>();
@@ -39,7 +39,7 @@ public class AppDbAddressService {
         return appDbAddressRepository.findByRefUID(refUID);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress findByRefUIDName(CFLibDbKeyHash256 refUID, String addressName) {
         if (refUID == null || refUID.isNull() || addressName == null || addressName.isEmpty()) {
             return null;
@@ -57,7 +57,7 @@ public class AppDbAddressService {
         return appDbAddressRepository.findOne(example).orElse(null);
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress create(AppDbAddress data) {
         if (data == null) {
             return null;
@@ -91,7 +91,7 @@ public class AppDbAddressService {
         }
     }
 
-    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress update(AppDbAddress data) {
         if (data == null) {
             return null;
