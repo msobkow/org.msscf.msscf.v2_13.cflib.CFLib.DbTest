@@ -29,7 +29,6 @@ public class TestAppDb {
     private LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean;
 
     @Autowired
-    // @Qualifier("AppDbAddressService")
     private AppDbAddressService appDbAddressService;
     
     @Transactional(value = Transactional.TxType.REQUIRES_NEW, dontRollbackOn = NoResultException.class)
@@ -39,36 +38,13 @@ public class TestAppDb {
         LocalDateTime now = LocalDateTime.now();
         // CFLibDbKeyHash256 adminpid = new CFLibDbKeyHash256("0123456789abcdef");
         CFLibDbKeyHash256 mgrpid = new CFLibDbKeyHash256("fedcba9876543210");
-        try {
-            if (em == null) {
-                EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-                if (f == null) {
-                    String msg = "ERROR: TestAppDb.performTests() appEntityManagerFactoryBean.getObject() returns null";
-                    System.err.println(msg);
-                    throw new IllegalStateException(msg);
-                }
-                else {
-                    em = f.createEntityManager();
-                }
-            }
-            List<AppDbAddress> addresses = appDbAddressService.findByRefUID(em, mgrpid);
-            if (addresses == null || addresses.isEmpty()) {
-                AppDbAddress appAddress = new AppDbAddress(new CFLibDbKeyHash256(0), mgrpid, "Home", "Mark Sobkow", "19", "207 Seventh Avenue North", null, "Yorkton", "SK", "Canada", "S3N 0X3", now, mgrpid, now, mgrpid);
-                appAddress = appDbAddressService.create(em, appAddress);
-                System.err.println("Sample AppDbAddress for Manager " + mgrpid.asString() + " created in AppDb.");
-            } else {
-                System.err.println("Sample AppDbAddress already exists for Manager " + mgrpid.asString() + ", or at least there isn't an empty list we can assume indicates a clean database");
-            }
-        }
-        catch (Exception e) {
-            String msg = "ERROR: TestAppDb.performTests() Caught and rethrew " + e.getClass().getCanonicalName() + " while querying or inserting the sample AppDbAddress for the Manager " + mgrpid.asString() + " - " + e.getMessage();
-            responseMessage.append(msg);
-            System.err.println(msg);
-            e.printStackTrace(System.err);
-        } finally {
-            if (em != null) {
-                em.close();
-            }
+        List<AppDbAddress> addresses = appDbAddressService.findByRefUID(mgrpid);
+        if (addresses == null || addresses.isEmpty()) {
+            AppDbAddress appAddress = new AppDbAddress(new CFLibDbKeyHash256(0), mgrpid, "Home", "Mark Sobkow", "19", "207 Seventh Avenue North", null, "Yorkton", "SK", "Canada", "S3N 0X3", now, mgrpid, now, mgrpid);
+            appAddress = appDbAddressService.create(appAddress);
+            responseMessage.append("Sample AppDbAddress for Manager " + mgrpid.asString() + " created in AppDb.");
+        } else {
+            responseMessage.append("Sample AppDbAddress already exists for Manager " + mgrpid.asString() + ", or at least there isn't an empty list we can assume indicates a clean database");
         }
         return responseMessage.toString();
     }

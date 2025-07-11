@@ -1,8 +1,5 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
-import jakarta.persistence.*;
-import jakarta.transaction.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,8 +7,14 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
+
+import jakarta.persistence.NoResultException;
 
 @Service("AppDbAddressService")
 public class AppDbAddressService {
@@ -19,197 +22,102 @@ public class AppDbAddressService {
     @Autowired
     @Qualifier("appEntityManagerFactoryBean")
     private LocalContainerEntityManagerFactoryBean appEntityManagerFactoryBean;
+    
+    @Autowired
+    private AppDbAddressRepository appDbAddressRepository;
 
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public AppDbAddress find(EntityManager em, CFLibDbKeyHash256 pid) {
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: appDbAddressService.find(em,pid) appEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            if (pid == null) {
-                return null;
-            }
-            AppDbAddress addr = em.find(AppDbAddress.class, pid);
-            return addr;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: AppDbAddressService.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instance with pid: " + pid + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public AppDbAddress find(CFLibDbKeyHash256 pid) {
+        return appDbAddressRepository.findById(pid).orElse(null);
     }
 
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public AppDbAddress findByRefUIDName(EntityManager em, CFLibDbKeyHash256 refUID, String name) {
-        if (refUID == null || refUID.isNull()) {
-            return null;
-        }
-        if (name == null || name.isEmpty()) {
-            return null;
-        }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: appDbAddressService.findByRefUIDName(em,refUID,name) appEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            AppDbAddress addr = (AppDbAddress)em.createQuery("select u from AppDbAddress u where u.refuid = :refUID and u.addrname = :addrName").setParameter("refUID", refUID).setParameter("addrName", name).getSingleResultOrNull();
-            return addr;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: AppDbAddressService.findByRefUIDName() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instance with RefUID: " + refUID.asString() + ", name: \"" + name + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(value = Transactional.TxType.REQUIRED, dontRollbackOn = NoResultException.class)
-    public List<AppDbAddress> findByRefUID(EntityManager em, CFLibDbKeyHash256 refUID) {
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public List<AppDbAddress> findByRefUID(CFLibDbKeyHash256 refUID) {
         if (refUID == null || refUID.isNull()) {
             return new ArrayList<>();
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: appDbAddressService.findByRefUID(em,refUID) appEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            List<AppDbAddress> listOfAddr = (List<AppDbAddress>)em.createQuery("select u from AppDbAddress u where u.refUID = :refUID").setParameter("refUID", refUID).getResultList();
-            if (listOfAddr == null) {
-                listOfAddr = new ArrayList<>();
-            }
-            return listOfAddr;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: AppDbAddressService.findByRefUID() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for AppDbAddress instances with refUID: \"" + refUID.asString() + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+        return appDbAddressRepository.findByRefUID(refUID);
     }
 
-    @Transactional(Transactional.TxType.REQUIRED)
-    public AppDbAddress create(EntityManager em, AppDbAddress data) {
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public AppDbAddress findByRefUIDName(CFLibDbKeyHash256 refUID, String addressName) {
+        if (refUID == null || refUID.isNull() || addressName == null || addressName.isEmpty()) {
+            return null;
+        }
+        AppDbAddress probe = new AppDbAddress();
+        probe.setRefUID(refUID);
+        probe.setAddressName(addressName);
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+            .withIgnoreNullValues()
+            .withMatcher("refuid, addrname", ExampleMatcher.GenericPropertyMatchers.exact());
+
+        Example<AppDbAddress> example = Example.of(probe, matcher);
+
+        return appDbAddressRepository.findOne(example).orElse(null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public AppDbAddress create(AppDbAddress data) {
         if (data == null) {
             return null;
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: appDbAddressService.create(em,data) appEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
+        CFLibDbKeyHash256 originalPid = data.getPid();
+        boolean generatedPid = false;
         try {
-            if (data.getPid() == null || data.getPid().isNull()) {
+            if (data.getPid() == null) {
                 data.setPid(new CFLibDbKeyHash256(0));
+                generatedPid = true;
             }
             LocalDateTime now = LocalDateTime.now();
             data.setCreatedAt(now);
             data.setUpdatedAt(now);
-            // em.getTransaction().begin();
-            AppDbAddress existing = em.find(AppDbAddress.class, data.getPid());
-            if (existing != null) {
-                return existing;
+
+            // Check if already exists
+            if (data.getPid() != null && appDbAddressRepository.existsById(data.getPid())) {
+                return appDbAddressRepository.findById(data.getPid()).orElse(null);
             }
-            em.persist(data);
-            // em.getTransaction().commit();
-            return data;
+
+            return appDbAddressRepository.save(data);
         } catch (Exception e) {
-            if (em.getTransaction().isActive()) {
-                em.getTransaction().rollback();
+            // Remove auto-generated pid if there was an error
+            if (generatedPid) {
+                data.setPid(null);
             }
+            System.err.println("ERROR: AppDbAddressService.create(data) Caught and rethrew " + e.getClass().getCanonicalName() +
+                " while creating AppDbAddress instance with pid: " +
+                (data.getPid() != null ? data.getPid().asString() : "null") + " - " + e.getMessage());
             throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
         }
     }
 
-    @Transactional(value = Transactional.TxType.REQUIRED, rollbackOn = NoResultException.class)
-    public AppDbAddress update(EntityManager em, AppDbAddress data) {
+    @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public AppDbAddress update(AppDbAddress data) {
         if (data == null) {
             return null;
         }
         if (data.getPid() == null || data.getPid().isNull()) {
             throw new IllegalArgumentException("Cannot update AppDbAddress with null primary identifier (pid)");
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = appEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: appDbAddressService.update(em,data) appEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            LocalDateTime now = LocalDateTime.now();
-            data.setUpdatedAt(now);
-            data = em.merge(data);
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: AppDbAddressService.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while update AppDbAddress with pid: " + data.getPid() + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
+
+        // Check if the entity exists
+        AppDbAddress existing = appDbAddressRepository.findById(data.getPid())
+            .orElseThrow(() -> new NoResultException("AppDbAddress with pid " + data.getPid() + " does not exist"));
+
+        // Update fields (except pid, createdAt)
+        existing.setAddressName(data.getAddressName());
+        existing.setAddressApartment(data.getAddressApartment());
+        existing.setAddressCity(data.getAddressCity());
+        existing.setAddressContact(data.getAddressContact());
+        existing.setAddressCountry(data.getAddressCountry());
+        existing.setAddressPostalCode(data.getAddressPostalCode());
+        existing.setAddressProvince(data.getAddressProvince());
+        existing.setAddressStreet(data.getAddressStreet());
+        existing.setAddressStreet2(data.getAddressStreet2());
+
+        // ... update other fields as needed ...
+        existing.setUpdatedAt(LocalDateTime.now());
+
+        return appDbAddressRepository.save(existing);
     }
 }
