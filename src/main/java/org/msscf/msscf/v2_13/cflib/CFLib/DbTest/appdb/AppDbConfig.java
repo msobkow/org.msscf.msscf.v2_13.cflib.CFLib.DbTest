@@ -3,9 +3,6 @@ package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 import javax.sql.DataSource;
 
 import jakarta.persistence.EntityManagerFactory;
-import jakarta.persistence.PersistenceContext;
-import jakarta.transaction.TransactionManager;
-import jakarta.transaction.UserTransaction;
 
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
@@ -22,7 +19,6 @@ import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
-import org.springframework.transaction.jta.JtaTransactionManager;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 
 @Configuration

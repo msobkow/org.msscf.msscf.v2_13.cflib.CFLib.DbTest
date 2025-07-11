@@ -29,12 +29,12 @@ public class SecDbUserService {
     private SecDbUserRepository secDbUserRepository;
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbUser find(EntityManager em, CFLibDbKeyHash256 pid) {
+    public SecDbUser find(CFLibDbKeyHash256 pid) {
         return secDbUserRepository.findById(pid).orElse(null);
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbUser findByName(EntityManager em, String name) {
+    public SecDbUser findByName(String name) {
         if (name == null || name.isEmpty()) {
             return null;
         }
@@ -51,7 +51,7 @@ public class SecDbUserService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public List<SecDbUser> findByEmail(EntityManager em, String email) {
+    public List<SecDbUser> findByEmail(String email) {
         if (email == null || email.isEmpty()) {
             return new ArrayList<>();
         }
@@ -59,7 +59,7 @@ public class SecDbUserService {
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public List<SecDbUser> findByMemberDeptCode(EntityManager em, String memberDeptCode) {
+    public List<SecDbUser> findByMemberDeptCode(String memberDeptCode) {
         if (memberDeptCode == null || memberDeptCode.isEmpty()) {
             return new ArrayList<>();
         }

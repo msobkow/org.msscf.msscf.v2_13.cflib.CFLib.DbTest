@@ -8,16 +8,13 @@ import java.util.List;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.NoResultException;
-import jakarta.persistence.PersistenceContext;
 
 @Service("SecDbSessionService")
 public class SecDbSessionService {
@@ -25,168 +22,74 @@ public class SecDbSessionService {
     @Autowired
     @Qualifier("secEntityManagerFactoryBean")
     private LocalContainerEntityManagerFactoryBean secEntityManagerFactoryBean;
-
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbSession find(EntityManager em, CFLibDbKeyHash256 pid) {
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbSessionService.find(em,pid) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            if (pid == null) {
-                return null;
-            }
-            SecDbSession manager = em.find(SecDbSession.class, pid);
-            return manager;
-        }
-        catch (NoResultException e) {
-            return null;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbSessionService.find() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbSession instance with pid: " + pid + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
-
-    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public List<SecDbSession> findByUserPID(EntityManager em, CFLibDbKeyHash256 secUserPID) {
-        if (secUserPID == null || secUserPID.isNull()) {
-            return new ArrayList<>();
-        }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbSessionService.findByName(em,name) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            List<SecDbSession> list = (List<SecDbSession>)em.createQuery("select s from SecDbSession s where s.user_pid = :secUserPID order by created_at desc").setParameter("secUserPID", secUserPID).getResultList();
-            return list;
-        }
-        catch (NoResultException e) {
-            return new ArrayList<>();
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbSessionService.findByUserPID() Caught and rethrew " + e.getClass().getCanonicalName() + " while searching for SecDbSession instance with user_pid: \"" + secUserPID.asString() + "\" - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
     
+    @Autowired
+    private SecDbSessionRepository secDbSessionRepository;
+
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public SecDbSession find(CFLibDbKeyHash256 pid) {
+        return secDbSessionRepository.findById(pid).orElse(null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
+    public List<SecDbSession> findByUser(SecDbUser user) {
+        if (user == null || user.getPid() == null || user.getPid().isNull()) {
+            return new ArrayList<>();
+        }
+        return secDbSessionRepository.findByUser(user);
+
+    }
+
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbSession create(EntityManager em, SecDbSession data) {
-        boolean newEM = false;
-        boolean pidAssigned = false;
+    public SecDbSession create(SecDbSession data) {
         if (data == null) {
             return null;
         }
-
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbSessionService.create(em,data) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
+        CFLibDbKeyHash256 originalPid = data.getPid();
+        boolean generatedPid = false;
         try {
-
+            if (data.getPid() == null) {
+                data.setPid(new CFLibDbKeyHash256(0));
+                generatedPid = true;
+            }
             LocalDateTime now = LocalDateTime.now();
             data.setCreatedAt(now);
 
-            if (data.getPid() == null || data.getPid().isNull()) {
-                data.setPid(new CFLibDbKeyHash256(0));
-                pidAssigned = true;
+            // Check if already exists
+            if (data.getPid() != null && secDbSessionRepository.existsById(data.getPid())) {
+                return secDbSessionRepository.findById(data.getPid()).orElse(null);
             }
 
-            SecDbSession existing;
-            try {
-                existing = em.find(SecDbSession.class, data.getPid());
-            } catch (NoResultException e) {
-                existing = null;
-            }
-            if (existing != null) {
-                return existing;
-            }
-
-            em.persist(data);
-
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbSessionService.create() Caught and rethrew " + e.getClass().getCanonicalName() + " while creating SecDbSession with newly assigned pid: " + data.getPid() + " - " + e.getMessage());
-            if (pidAssigned) {
-                System.err.println("RECOV: Resetting newly assigned pid to null");
+            return secDbSessionRepository.save(data);
+        } catch (Exception e) {
+            // Remove auto-generated pid if there was an error
+            if (generatedPid) {
                 data.setPid(null);
             }
+            System.err.println("ERROR: SecDbSessionService.create(data) Caught and rethrew " + e.getClass().getCanonicalName() +
+                " while creating SecDbSession instance with pid: " +
+                (data.getPid() != null ? data.getPid().asString() : "null") + " - " + e.getMessage());
             throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
         }
     }
 
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "secTransactionManager")
-    public SecDbSession update(EntityManager em, SecDbSession data) {
+    public SecDbSession update(SecDbSession data) {
         if (data == null) {
             return null;
         }
         if (data.getPid() == null || data.getPid().isNull()) {
             throw new IllegalArgumentException("Cannot update SecDbSession with null primary identifier (pid)");
         }
-        boolean newEM = false;
-        if (em == null) {
-            EntityManagerFactory f = secEntityManagerFactoryBean.getObject();
-            if (f == null) {
-                String msg = "ERROR: SecDbSessionService.update(em,data) secEntityManagerFactoryBean.getObject() returns null";
-                System.err.println(msg);
-                throw new IllegalStateException(msg);
-            }
-            else {
-                em = f.createEntityManager();
-            }
-            newEM = true;
-        }
-        try {
-            data = em.merge(data);
-            return data;
-        }
-        catch (Exception e) {
-            System.err.println("ERROR: SecDbSessionService.update() Caught and rethrew " + e.getClass().getCanonicalName() + " while updating SecDbSession with pid: " + data.getPid() + " - " + e.getMessage());
-            throw e;
-        } finally {
-            if (newEM) {
-                em.close();
-            }
-        }
-    }
 
+        // Check if the entity exists
+        SecDbSession existing = secDbSessionRepository.findById(data.getPid())
+            .orElseThrow(() -> new NoResultException("SecDbSession with pid " + data.getPid() + " does not exist"));
+
+        // Update fields (except pid, createdAt)
+        existing.setSessTerminationInfo(data.getSessTerminationInfo());
+        existing.setTerminatedAt(data.getTerminatedAt());
+
+        return secDbSessionRepository.save(existing);
+    }
 }

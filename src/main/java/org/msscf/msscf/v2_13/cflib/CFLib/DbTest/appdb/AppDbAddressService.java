@@ -1,8 +1,6 @@
 package org.msscf.msscf.v2_13.cflib.CFLib.DbTest.appdb;
 
 import jakarta.persistence.*;
-// import jakarta.persistence.EntityManager;
-// import jakarta.persistence.NoResultException;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
@@ -13,7 +11,6 @@ import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 @Service("AppDbAddressService")
