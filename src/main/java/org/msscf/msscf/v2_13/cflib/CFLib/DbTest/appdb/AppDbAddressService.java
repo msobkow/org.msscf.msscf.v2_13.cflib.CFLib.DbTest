@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbUser;
+import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbUserService;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,6 +28,9 @@ public class AppDbAddressService {
     @Autowired
     private AppDbAddressRepository appDbAddressRepository;
 
+    @Autowired
+    private SecDbUserService secDbUserService;
+
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress find(CFLibDbKeyHash256 pid) {
         return appDbAddressRepository.findById(pid).orElse(null);
@@ -37,6 +42,14 @@ public class AppDbAddressService {
             return new ArrayList<>();
         }
         return appDbAddressRepository.findByRefUID(refUID);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
+    public List<AppDbAddress> findByUser(SecDbUser user) {
+        if (user == null || user.getPid() == null || user.getPid().isNull()) {
+            return new ArrayList<>();
+        }
+        return appDbAddressRepository.findByRefUID(user.getPid());
     }
 
     @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
@@ -57,10 +70,35 @@ public class AppDbAddressService {
         return appDbAddressRepository.findOne(example).orElse(null);
     }
 
+    @Transactional(propagation = Propagation.REQUIRED, noRollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
+    public AppDbAddress findByUserName(SecDbUser user, String addressName) {
+        if (user == null || user.getPid() == null || user.getPid().isNull() || addressName == null || addressName.isEmpty()) {
+            return null;
+        }
+        AppDbAddress probe = new AppDbAddress();
+        probe.setRefUID(user.getPid());
+        probe.setAddressName(addressName);
+
+        ExampleMatcher matcher = ExampleMatcher.matching()
+            .withIgnoreNullValues()
+            .withMatcher("refuid, addrname", ExampleMatcher.GenericPropertyMatchers.exact());
+
+        Example<AppDbAddress> example = Example.of(probe, matcher);
+
+        return appDbAddressRepository.findOne(example).orElse(null);
+    }
+
     @Transactional(propagation = Propagation.REQUIRED, rollbackFor = NoResultException.class, transactionManager = "appTransactionManager")
     public AppDbAddress create(AppDbAddress data) {
         if (data == null) {
             return null;
+        }
+        if (data.getRefUID() == null || data.getRefUID().isNull()) {
+            throw new IllegalArgumentException("AppDbAddressService.create() Cannot create data without a valid RefUID");
+        }
+        SecDbUser user = secDbUserService.find(data.getRefUID());
+        if (user == null) {
+            throw new IllegalArgumentException("AppDbAddressService.create() RefUID " + data.getRefUID().asString() + " does not reference an existing SecDbUser");
         }
         CFLibDbKeyHash256 originalPid = data.getPid();
         boolean generatedPid = false;
@@ -99,12 +137,20 @@ public class AppDbAddressService {
         if (data.getPid() == null || data.getPid().isNull()) {
             throw new IllegalArgumentException("Cannot update AppDbAddress with null primary identifier (pid)");
         }
+        if (data.getRefUID() == null || data.getRefUID().isNull()) {
+            throw new IllegalArgumentException("AppDbAddressService.update() Cannot update data without a valid RefUID");
+        }
+        SecDbUser user = secDbUserService.find(data.getRefUID());
+        if (user == null) {
+            throw new IllegalArgumentException("AppDbAddressService.update() RefUID " + data.getRefUID().asString() + " does not reference an existing SecDbUser");
+        }
 
         // Check if the entity exists
         AppDbAddress existing = appDbAddressRepository.findById(data.getPid())
             .orElseThrow(() -> new NoResultException("AppDbAddress with pid " + data.getPid() + " does not exist"));
 
         // Update fields (except pid, createdAt)
+        existing.setRefUID(data.getRefUID());
         existing.setAddressName(data.getAddressName());
         existing.setAddressApartment(data.getAddressApartment());
         existing.setAddressCity(data.getAddressCity());

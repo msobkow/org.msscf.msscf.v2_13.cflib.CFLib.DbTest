@@ -7,7 +7,10 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbUser;
+import org.msscf.msscf.v2_13.cflib.CFLib.DbTest.secdb.SecDbUserService;
 import org.msscf.msscf.v2_13.cflib.CFLib.dbutil.CFLibDbKeyHash256;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Entity
 @Table(name = "app_addr", schema = "appdb",
@@ -83,6 +86,10 @@ public class AppDbAddress implements Comparable<Object> {
         @AttributeOverride(name = "bytes", column = @Column(name = "updated_by", nullable = false, unique = false, length = CFLibDbKeyHash256.HASH_LENGTH))
     })
     private CFLibDbKeyHash256 updatedBy;
+
+    @Transient
+    @Autowired
+    private transient SecDbUserService secDbUserService;
 
     public AppDbAddress() {}
 
@@ -179,6 +186,28 @@ public class AppDbAddress implements Comparable<Object> {
             throw new IllegalArgumentException("refUID cannot be null");
         }
         this.refUID = refUID;
+    }
+
+    public SecDbUser getUser() {
+        if (refUID == null || refUID.isNull()) {
+            return null;
+        }
+        else {
+            SecDbUser user = secDbUserService.find(refUID);
+            if (user == null) {
+                throw new IllegalStateException("AppDbAddress.getUser() could not resolve refUID " + refUID.asString() + " to an existing SecDbUser");
+            }
+            else {
+                return user;
+            }
+        }
+    }
+
+    public void setUser(SecDbUser user) {
+        if (user == null || user.getPid() == null || user.getPid().isNull()) {
+            throw new IllegalArgumentException("AppDbAddress.setUser() user cannot be null and must be persisted");
+        }
+        refUID = user.getPid();
     }
 
     public String getAddressName() {
